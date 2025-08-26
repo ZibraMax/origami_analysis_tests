@@ -97,7 +97,7 @@ for i in range(0, M+1):
         print(f"Analysis failed at step {i}")
         break
     lam = ops.getLoadFactor(1)
-    theta = 2*np.pi-ops.eleResponse(hinges_element_numbers[-3], 'theta')[0]
+    theta = 2*np.pi-ops.eleResponse(hinges_element_numbers[-2], 'theta')[0]
     print(f"{i},{lam},{theta * 180.0 / np.pi}")
     data['step'].append(i)
     data['load_factor'].append(lam)

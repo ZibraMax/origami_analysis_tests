@@ -41,21 +41,20 @@ ops.element('corotTruss', 1, 1, 2, 1.0, 1)
 ops.element('corotTruss', 2, 2, 0, 1.0, 1)
 ops.element('corotTruss', 3, 0, 3, 1.0, 1)
 ops.element('corotTruss', 4, 1, 3, 1.0, 1)
-ops.element('OriHinge', 5, 2, 0, 1, 3, 0.3, R(10), R(350))
+ops.element('OriHinge', 5, 3, 0, 1, 2, 0.3, R(10), R(350))
 
 # --- Nodal Load ---
 ops.timeSeries('Linear', 1)
 ops.pattern('Plain', 1, 1)
-ops.load(3, 0.0, 0.0, 1, 0.0, 0.0, 0.0)
+ops.load(3, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 
 # --- Static Analysis Setup ---
 ops.system('Umfpack')
 ops.constraints('Plain')
 ops.numberer('RCM')
-ops.test('NormDispIncr', 1.0e-5, 100)
+ops.test('NormDispIncr', 1.0e-3, 200)
 ops.algorithm('Newton')
 ops.integrator('ArcLength', 0.1, 0.1)
-ops.integrator('LoadControl', 0.1)
 ops.analysis('Static')
 
 # --- Perform Analysis ---

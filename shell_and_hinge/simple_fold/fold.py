@@ -5,10 +5,10 @@ import matplotlib.pyplot as plt
 import json
 
 
-def visualize(ax=None):
+def visualize(ax=None, undeformed=False):
     if ax is None:
-        fig = plt.figure()
-        ax = fig.add_subplot(projection='3d')
+        fig = plt.figure(figsize=[12, 5])
+        ax = fig.add_subplot(1, 2, 1, projection='3d')
 
     etags = ops.getEleTags()
     dictionary = [ops.eleNodes(i) for i in etags]
@@ -21,17 +21,22 @@ def visualize(ax=None):
             coords[j, 1] += disp[1]
             coords[j, 2] += disp[2]
         if etype == "OriHinge":
-            ax.plot(coords[:, 0], coords[:, 1], coords[:, 2], '--',
-                    color='yellow', linewidth=3, zorder=100)
+            ax.plot(coords[1:-1, 0], coords[1:-1, 1], coords[1:-1, 2], '--',
+                    color='yellow', linewidth=2, zorder=100)
         else:
             # Close the loop
+            color = 'green'
+            alpha = 0.5
+            if undeformed:
+                color = 'black'
+                alpha = 1
             coords = np.vstack((coords, coords[0, :]))
             ax.plot_trisurf(coords[:, 0], coords[:, 1], coords[:, 2],
-                            color='black', alpha=0.6)
+                            color=color, alpha=alpha)
     # Plot nodes as points
     for i in range(len(nodes)):
         coor = ops.nodeCoord(i)
-        ax.scatter(coor[0], coor[1], coor[2], color='red', s=20, zorder=200)
+        ax.scatter(coor[0], coor[1], coor[2], color='yellow', s=20, zorder=200)
 
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
@@ -55,7 +60,6 @@ dictionary_shells = [i for i, etype in enumerate(
     data['types']) if etype != "OriHinge"]
 dictionary_hinges = [i for i, etype in enumerate(
     data['types']) if etype == "OriHinge"]
-print(dictionary_hinges)
 # For every hinge element, identify the two faces it connects
 hinges_to_faces = {}
 for i in dictionary_hinges:
@@ -72,7 +76,7 @@ for i in dictionary_hinges:
 
 pairs_constraints = []
 
-EXTRA_NODES = False
+EXTRA_NODES = True
 if EXTRA_NODES:
     for i, faces in hinges_to_faces.items():
         face1, face2 = faces
@@ -119,7 +123,7 @@ for i, element in enumerate(dictionary):
     if etype == 'OriHinge':
         ops.element('OriHinge', i, *element, kf, THETA_1, THETA_2)
     elif etype == 'ASDShellT3':
-        ops.element('ASDShellT3', i, *element, 1)
+        ops.element('ASDShellT3', i, *element, 1, '-corotational')
 
 # Apply boundary conditions
 for bv in ebc:
@@ -132,23 +136,41 @@ for load in nbc:
 ops.system('Umfpack')
 ops.constraints('Plain')
 ops.numberer('RCM')
-ops.test('NormDispIncr', 1.0e-5, 100)
+ops.test('NormDispIncr', 1.0e-3, 200)
 ops.algorithm('Newton')
-# ops.integrator('ArcLength', 0.1, 0.1)
-ops.integrator('LoadControl', 0.1)
+ops.integrator('ArcLength', 0.1, 0.1)
+# ops.integrator('LoadControl', 0.1)
 ops.analysis('Static')
 
-M = 100
-n = 5
-visualize()
+
+data = {}
+data['step'] = []
+data['load_factor'] = []
+data['angle_degrees'] = []
+data['disp_node4_z'] = []
+
+print("Step,Load_Factor,Angle(degrees),Disp_Node4_Z")
+M = 60
+n = 10
+visualize(undeformed=True)
 for i in range(1, M+1):
     if ops.analyze(1) != 0:
         print(f"Analysis failed at step {i}")
         break
     lam = ops.getLoadFactor(1)
-    theta = ops.eleResponse(2, 'theta') or [0]
+    theta = ops.eleResponse(2, 'theta')
     disp_z = ops.nodeDisp(3, 3)
     print(f"{i},{lam},{theta[0] * 180.0 / np.pi},{disp_z}")
+    data['step'].append(i)
+    data['load_factor'].append(lam)
+    data['angle_degrees'].append(theta[0] * 180.0 / np.pi)
+    data['disp_node4_z'].append(disp_z)
     if i % (M//n) == 0 or i == M:
         visualize(plt.gca())
+ax = plt.gcf().add_subplot(1, 2, 2)
+plt.plot(data['angle_degrees'], data['load_factor'], 'o--')
+plt.grid()
+plt.xlabel('Angle (degrees)')
+plt.ylabel('Load Factor')
+plt.tight_layout()
 plt.show()
