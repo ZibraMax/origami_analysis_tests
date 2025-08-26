@@ -86,7 +86,6 @@ for i in range(1, M+1):
         disp = ops.nodeDisp(node)
         ax.scatter(coor[0]+disp[0], coor[1]+disp[1],
                    coor[2]+disp[2], color='b')
-        print(coor)
     for ele in ops.getEleTags():
         if ele in hinges_element_numbers:
             continue

@@ -30,7 +30,7 @@ element corotTruss 2 2 3 1.0 1
 element corotTruss 3 3 1 1.0 1
 element corotTruss 4 1 4 1.0 1
 element corotTruss 5 2 4 1.0 1
-element OriHinge 6 3 1 2 4 0.3
+element OriHinge 6 3 1 2 4 0.3 0.174533 6.10865
 
 # --- Carga nodal ---
 timeSeries Linear 1
@@ -45,8 +45,8 @@ constraints Plain
 numberer RCM
 test NormDispIncr 1.0e-8 100
 algorithm Newton
-integrator ArcLength 0.1 1.0
-# integrator LoadControl 0.1
+# integrator ArcLength 0.1 1.0
+integrator LoadControl 0.1
 analysis Static
 
 # Realizar análisis M veces
