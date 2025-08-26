@@ -53,7 +53,7 @@ ops.system('Umfpack')
 ops.constraints('Plain')
 ops.numberer('RCM')
 ops.test('NormDispIncr', 1.0e-3, 200)
-ops.algorithm('Newton')
+# ops.algorithm('Newton')
 ops.integrator('ArcLength', 0.1, 0.1)
 ops.analysis('Static')
 
@@ -64,9 +64,9 @@ data['load_factor'] = []
 data['angle_degrees'] = []
 data['disp_node4_z'] = []
 print("Step,Load_Factor,Angle(degrees),Disp_Node4_Z")
-fig = plt.figure()
-ax = fig.add_subplot(111, projection='3d')
-M = 100
+fig = plt.figure(figsize=[12, 5])
+ax = fig.add_subplot(1, 2, 1, projection='3d')
+M = 20
 hinges_element_numbers = [5]
 for i in range(1, M+1):
     if ops.analyze(1) != 0:
@@ -107,13 +107,13 @@ for i in range(1, M+1):
 
 # Two legend lines, one red and one black
 red_line = mlines.Line2D(
-    [], [], color='r', label='Deformed shape at each step')
-black_line = mlines.Line2D([], [], color='k', label='Elements')
+    [], [], color='r', label='Final shape')
+black_line = mlines.Line2D([], [], color='k', label='Deformation process')
 plt.legend(handles=[red_line, black_line])
-plt.show()
-
+ax = fig.add_subplot(1, 2, 2)
 plt.plot(data['angle_degrees'], data['load_factor'], 'o--')
 plt.grid()
 plt.xlabel('Angle (degrees)')
 plt.ylabel('Load Factor')
+plt.tight_layout()
 plt.show()
