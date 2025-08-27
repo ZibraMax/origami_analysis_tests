@@ -66,6 +66,21 @@ data['disp_node4_z'] = []
 print("Step,Load_Factor,Angle(degrees),Disp_Node4_Z")
 fig = plt.figure(figsize=[12, 5])
 ax = fig.add_subplot(1, 2, 1, projection='3d')
+ax.quiver(*[-1.1, 0.0, 0.4330127018922196], 0.23, 0, 0, color='k', linewidth=2,
+          arrow_length_ratio=0.5, zorder=300)
+ax.text(*[-1.15, 0.0, 0.4330127018922196],
+        'P', color='k', fontsize=12)
+# Add small X,Y,Z axes
+ax.quiver(*[-0.5, -1.0, 0.0], 0.2, 0, 0, color='r', linewidth=1,
+          arrow_length_ratio=0.5, zorder=300)
+ax.quiver(*[-0.5, -1.0, 0.0], 0, 0.2, 0, color='g', linewidth=1,
+          arrow_length_ratio=0.5, zorder=300)
+ax.quiver(*[-0.5, -1.0, 0.0], 0, 0, 0.2, color='b', linewidth=1,
+          arrow_length_ratio=0.5, zorder=300)
+ax.text(1.25-1.5, -1.0, 0.0, 'X', color='r', fontsize=12)
+ax.text(1.0-1.5, -0.75, 0.0, 'Y', color='g', fontsize=12)
+ax.text(1.0-1.5, -1.0, 0.25, 'Z', color='b', fontsize=12)
+plt.axis("off")
 M = 20
 hinges_element_numbers = [5]
 for i in range(1, M+1):

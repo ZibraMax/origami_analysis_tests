@@ -9,6 +9,23 @@ def visualize(ax=None, undeformed=False):
     if ax is None:
         fig = plt.figure(figsize=[12, 5])
         ax = fig.add_subplot(1, 2, 1, projection='3d')
+        # plt.axis('off')
+        # Add arrow for load in 3D. Use a quiver plot with a single point
+        ax.quiver(*[-1.1, 0.0, 0.4330127018922196], 0.23, 0, 0, color='k', linewidth=2,
+                  arrow_length_ratio=0.5, zorder=300)
+        ax.text(*[-1.15, 0.0, 0.4330127018922196],
+                'P', color='k', fontsize=12)
+        # Add small X,Y,Z axes
+        ax.quiver(*[-0.5, -1.0, 0.0], 0.2, 0, 0, color='r', linewidth=1,
+                  arrow_length_ratio=0.5, zorder=300)
+        ax.quiver(*[-0.5, -1.0, 0.0], 0, 0.2, 0, color='g', linewidth=1,
+                  arrow_length_ratio=0.5, zorder=300)
+        ax.quiver(*[-0.5, -1.0, 0.0], 0, 0, 0.2, color='b', linewidth=1,
+                  arrow_length_ratio=0.5, zorder=300)
+        ax.text(1.25-1.5, -1.0, 0.0, 'X', color='r', fontsize=12)
+        ax.text(1.0-1.5, -0.75, 0.0, 'Y', color='g', fontsize=12)
+        ax.text(1.0-1.5, -1.0, 0.25, 'Z', color='b', fontsize=12)
+        plt.axis("off")
 
     etags = ops.getEleTags()
     dictionary = [ops.eleNodes(i) for i in etags]

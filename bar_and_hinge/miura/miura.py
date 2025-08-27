@@ -19,8 +19,8 @@ ebc = data['ebc']
 nbc = data['nbc']
 E = 1000
 A = 1
-stifness_f = 100
-k_hinges = 0.1
+stifness_f = 10
+k_hinges = 1
 k_panels = stifness_f*k_hinges
 fact = 1
 
@@ -60,8 +60,8 @@ for node in range(len(vertices)):
 for bc in ebc:
     ops.fix(bc[0], *(bc[1:]+[1, 1, 1]))
 
-ops.equalDOF(2, 5, 1)
-ops.equalDOF(5, 8, 1)
+# ops.equalDOF(2, 5, 1)
+# ops.equalDOF(5, 8, 1)
 
 
 ops.timeSeries('Linear', 1)
@@ -73,8 +73,8 @@ ops.constraints('Plain')
 ops.numberer('RCM')
 ops.test('NormUnbalance', 1e-5, 50)
 ops.algorithm('Newton')
-# ops.integrator('ArcLength', 1, 1)
-# ops.integrator('LoadControl', 0.01)
+# ops.integrator('ArcLength', 0.5, 0.1)
+# ops.integrator('LoadControl', 0.1)
 ops.integrator('DisplacementControl', 5, 1, -0.1)
 ops.analysis('Static')
 
@@ -86,7 +86,7 @@ data['step'] = []
 data['load_factor'] = []
 data['angle_degrees'] = []
 print("Step,Load_Factor,Angle(degrees)")
-M = 80
+M = 100
 n_drawings = 10
 for i in range(0, M+1):
     if i == 0:
@@ -102,6 +102,7 @@ for i in range(0, M+1):
     data['step'].append(i)
     data['load_factor'].append(lam)
     data['angle_degrees'].append(theta * 180.0 / np.pi)
+    # data['angle_degrees'].append(-ops.nodeDisp(5, 1))
 
     if i % (M//n_drawings) == 0 or i == M:
         for node in range(len(vertices)):
