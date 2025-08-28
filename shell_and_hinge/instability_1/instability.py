@@ -202,7 +202,7 @@ ops.constraints('Plain')
 ops.test('NormDispIncr', 1.0e-6, 100)
 # ops.integrator('LoadControl', 0.1)
 # ops.integrator('DisplacementControl', nbc[0][0], 3, -1)
-ops.integrator('ArcLength', 2, 0.5)
+ops.integrator('ArcLength', 0.2, 0.5)
 ops.algorithm('Newton')
 ops.analysis('Static')
 
@@ -222,20 +222,23 @@ plt.show()
 
 fig = plt.figure(figsize=[12, 5])
 ax = fig.add_subplot(1, 2, 1, projection='3d')
-for i in range(1, M+1):
-    if ops.analyze(1) != 0:
-        print(f"Analysis failed at step {i}")
-        break
-    lam = ops.getLoadFactor(1)
-    # theta = ops.eleResponse(len(dictionary)-2, 'theta')
-    disp_z = ops.nodeDisp(nbc[0][0], 3)
-    print(f"{i},{lam},{disp_z}")
-    data['step'].append(i)
-    data['load_factor'].append(lam)
-    data['disp'].append(-disp_z)
+try:
+    for i in range(1, M+1):
+        if ops.analyze(1) != 0:
+            print(f"Analysis failed at step {i}")
+            break
+        lam = ops.getLoadFactor(1)
+        # theta = ops.eleResponse(len(dictionary)-2, 'theta')
+        disp_z = ops.nodeDisp(nbc[0][0], 3)
+        print(f"{i},{lam},{disp_z}")
+        data['step'].append(i)
+        data['load_factor'].append(lam)
+        data['disp'].append(-disp_z)
+except KeyboardInterrupt as e:
+    print(f"Analysis stopped at step {i} with error: {e}")
 visualize(plt.gca())
 ax = plt.gcf().add_subplot(1, 2, 2)
-plt.plot(data['step'], data['load_factor'], 'o--')
+plt.plot(data['disp'], data['load_factor'], 'o--')
 plt.grid()
 plt.xlabel('Disp')
 plt.ylabel('Load Factor')
