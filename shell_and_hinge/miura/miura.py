@@ -5,6 +5,39 @@ import matplotlib.pyplot as plt
 import json
 
 
+def create_extra_nodes_for_hinges(nodes, elemements, types):
+    if not isinstance(nodes, np.ndarray):
+        nodes = np.array(nodes)
+    nodes = nodes.tolist()
+    nodes_hinges_middle = []
+    nodes_to_element = {}
+    tie_nodes = []
+    for i, etype in enumerate(types):
+        if etype == "OriHinge":
+            n1, n2, n3, n4 = elemements[i]
+            nodes_hinges_middle.append(n2)
+            nodes_hinges_middle.append(n3)
+        else:
+            element = elemements[i]
+            for n in element:
+                if n not in nodes_to_element:
+                    nodes_to_element[n] = []
+                nodes_to_element[n].append(i)
+    nodes_hinges_middle = list(set(nodes_hinges_middle))
+    for node in nodes_hinges_middle:
+        connected_elements = nodes_to_element[node]
+        number_conected = len(connected_elements)
+        for i in range(number_conected - 1):
+            new_node_id = len(nodes)
+            nodes.append(nodes[node])
+            tie_nodes.append((node, new_node_id))
+            elem_idx = connected_elements[i+1]
+            pos_new_node = elemements[elem_idx].index(node)
+            elemements[elem_idx][pos_new_node] = new_node_id
+
+    return np.array(nodes), elemements, tie_nodes
+
+
 def visualize(ax=None, undeformed=False):
     if ax is None:
         fig = plt.figure(figsize=[12, 5])
@@ -95,22 +128,8 @@ pairs_constraints = []
 
 EXTRA_NODES = True
 if EXTRA_NODES:
-    for i, faces in hinges_to_faces.items():
-        face1, face2 = faces
-        n1, n2, n3, n4 = data['dictionary'][i]
-        shell = data['dictionary'][face2]
-
-        idx_selected = shell.index(n2)
-        nodes.append(nodes[n2])
-        new_node = len(nodes)-1
-        pairs_constraints.append((n2, new_node))
-        dictionary[face2][idx_selected] = new_node
-
-        idx_selected = shell.index(n3)
-        nodes.append(nodes[n3])
-        new_node = len(nodes)-1
-        pairs_constraints.append((n3, new_node))
-        dictionary[face2][idx_selected] = new_node
+    nodes, dictionary, pairs_constraints = create_extra_nodes_for_hinges(
+        nodes, dictionary, data['types'])
 
 nodes = np.array(nodes)
 types = data['types']
@@ -150,11 +169,11 @@ ops.pattern('Plain', 1, 1)
 for load in nbc:
     ops.load(*load)
 
-ops.equalDOF(5, 2, 1)
-ops.equalDOF(5, 8, 1)
+# ops.equalDOF(5, 2, 1)
+# ops.equalDOF(5, 8, 1)
 
-ops.equalDOF(1, 4, 1)
-ops.equalDOF(1, 7, 1)
+# ops.equalDOF(1, 4, 1)
+# ops.equalDOF(1, 7, 1)
 
 # ops.setNodeDisp(2, 4, 2)
 

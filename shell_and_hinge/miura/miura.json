@@ -54,8 +54,8 @@
 	"properties": {
 		"problem": "ShellAndHinge",
 		"kf": 0.3,
-		"E": 1000,
+		"E": 200000,
 		"v": 0.3,
-		"t": 0.1
+		"t": 1
 	}
 }
