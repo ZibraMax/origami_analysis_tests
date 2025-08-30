@@ -196,13 +196,12 @@ for load in nbc:
     ops.load(*load)
 
 
-ops.system('UmfPack')
+ops.system('BandGeneral')
 ops.numberer('RCM')
 ops.constraints('Plain')
-ops.test('NormDispIncr', 1.0e-6, 100)
+ops.test('NormDispIncr', 1.0e-3, 100)
 # ops.integrator('LoadControl', 0.1)
-# ops.integrator('DisplacementControl', nbc[0][0], 3, -1)
-ops.integrator('ArcLength', 0.2, 0.5)
+ops.integrator('DisplacementControl', nbc[0][0], 3, -0.1)
 ops.algorithm('Newton')
 ops.analysis('Static')
 
@@ -212,7 +211,7 @@ data['load_factor'] = []
 data['disp'] = []
 
 print("Step,Load_Factor")
-M = 1000
+M = 5000
 n = 3
 fig = plt.figure(figsize=[12, 5])
 ax = fig.add_subplot(projection='3d')
@@ -230,6 +229,10 @@ try:
         lam = ops.getLoadFactor(1)
         # theta = ops.eleResponse(len(dictionary)-2, 'theta')
         disp_z = ops.nodeDisp(nbc[0][0], 3)
+        if abs(disp_z) > 35:
+            print(f"Switching to arclength {i}")
+            ops.integrator('ArcLength', 0.01, 0.01)
+
         print(f"{i},{lam},{disp_z}")
         data['step'].append(i)
         data['load_factor'].append(lam)
