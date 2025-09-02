@@ -71,11 +71,11 @@ def R(degrees): return degrees * np.pi / 180.0
 def D(radians): return radians * 180.0 / np.pi
 
 
-data = json.load(open('./bar_and_hinge/instability/instability.json'))
+ffile = json.load(open('./bar_and_hinge/instability/instability.json'))
 
-nodes = data['nodes']
-elements = data['dictionary']
-types = data['types']
+nodes = ffile['nodes']
+elements = ffile['dictionary']
+types = ffile['types']
 bars = [elements[i] for i in range(len(elements)) if types[i] == "CorotTruss"]
 folds = [elements[i] for i in range(len(elements)) if types[i] == "OriHinge"]
 bends = [elements[i] for i in range(len(elements)) if types[i] == "BendHinge"]
@@ -91,8 +91,8 @@ types = ["CorotTruss"] * len(bars) + ["OriHinge"] * \
 elements = bars + folds + bends
 
 
-ebc = data['ebc']
-nbc = data['nbc']
+ebc = ffile['ebc']
+nbc = ffile['nbc']
 
 nodes = np.array(nodes)
 tolerance = 1e-6
@@ -131,15 +131,18 @@ ops.uniaxialMaterial('Elastic', 1, E)
 
 for i, v in enumerate(nodes):
     ops.node(i, *v)
-
+ntypes = []
 for i, ele in enumerate(elements):
     nel = len(ops.getEleTags())
     if types[i] == "CorotTruss":
         ops.element('corotTruss', nel, *ele, A, 1)
+        ntypes.append("L1V")
     elif types[i] == "OriHinge":
         ops.element('OriHinge', nel, *ele, k_hinges, R(10), R(350))
+        ntypes.append("OH")
     elif types[i] == "BendHinge":
         ops.element('OriHinge', nel, *ele, k_panels, R(10), R(350))
+        ntypes.append("OH")
 
 bcarray = np.array(ebc)
 nodes_bc = bcarray[:, 0]
@@ -186,9 +189,21 @@ def draw():
     ax.set_xlim(min(data['disp']), max(data['disp']) + 1)
     ax.set_ylim(min(data['load_factor']) - 1, max(data['load_factor']) + 1)
     plt.draw()
-    plt.pause(0.1)  # Pause for a short duration to allow plot to update
+    json.dump(ffile, open('./output/instability_bah.json', 'w'))
+    # plt.pause(0.1)  # Pause for a short duration to allow plot to update
 
 
+solutions = [
+    {
+        "info": {"solver-type": "MGDCM", "ld": 0},
+        "U": [0.0]*(3*len(nodes)),
+    }
+]
+ffile["solutions"] = solutions
+ffile["nodes"] = nodes.tolist()
+ffile["dictionary"] = elements
+ffile["types"] = ntypes
+ffile["nvn"] = 3
 flag = True
 try:
     for i in range(1, M+1):
@@ -198,15 +213,28 @@ try:
         lam = ops.getLoadFactor(1)
         # theta = ops.eleResponse(len(dictionary)-2, 'theta')
         disp_z = ops.nodeDisp(nbc[0][0], 3)
-        if i % 10 == 0:
-            draw()
+        # if i % 10 == 0:
+        #     draw()
 
         print(f"{i},{lam},{disp_z}")
         data['step'].append(i)
         data['load_factor'].append(lam)
         data['disp'].append(-disp_z)
+        U_NODES = []
+        for j in range(len(nodes)):
+            U_NODES.extend(ops.nodeDisp(j))
+        U_NODES = np.array(U_NODES)
+        U_NODES = U_NODES.reshape((3*len(nodes), 1))
+        solutions.append(
+            {
+                "info": {"solver-type": "MGDCM", "ld": lam},
+                "U": U_NODES.tolist(),
+            }
+        )
+
 except KeyboardInterrupt as e:
     print(f"Analysis stopped at step {i} with error: {e}")
+json.dump(ffile, open('./output/instability_bah.json', 'w'))
 
 plt.ioff()
 plt.show()
