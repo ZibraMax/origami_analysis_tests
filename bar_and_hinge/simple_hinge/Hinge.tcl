@@ -46,7 +46,7 @@ numberer RCM
 test NormDispIncr 1.0e-8 100
 algorithm Newton
 # integrator ArcLength 0.1 1.0
-integrator LoadControl 0.1
+integrator MGDCM 0.1
 analysis Static
 
 # Realizar análisis M veces

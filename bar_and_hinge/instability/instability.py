@@ -100,14 +100,14 @@ fixed_nodes = np.where((np.abs(nodes[:, 0]) < tolerance) & (
     np.abs(nodes[:, 2]) < tolerance))[0]
 for n in fixed_nodes:
     if not any(bv[0] == n for bv in ebc):
-        ebc.append([int(n), 1, 1, 1, 1, 1, 1])
+        ebc.append([int(n), 1, 1, 1])
 # Now at x = maxx
 maxx = np.max(nodes[:, 0])
 fixed_nodes = np.where((np.abs(nodes[:, 0] - maxx) < tolerance) & (
     np.abs(nodes[:, 2]) < tolerance))[0]
 for n in fixed_nodes:
     if not any(bv[0] == n for bv in ebc):
-        ebc.append([int(n), 1, 1, 1, 1, 1, 1])
+        ebc.append([int(n), 1, 1, 1])
 
 minx = np.min(nodes[:, 0])
 maxy = np.max(nodes[:, 1])
@@ -115,7 +115,7 @@ miny = np.min(nodes[:, 1])
 center = [(maxx + minx) / 2, (maxy + miny) / 2-7.559289460184545/2]
 distances = np.linalg.norm(nodes[:, 0:2] - center, axis=1)
 n_load = np.argmin(distances)
-nbc.append([int(n_load), 0, 0, -1.0, 0, 0, 0])
+nbc.append([int(n_load), 0, 0, -1.0])
 
 E = 1000
 A = 1
@@ -126,7 +126,7 @@ fact = 1
 
 
 ops.wipe()
-ops.model('basic', '-ndm', 3, '-ndf', 6)
+ops.model('basic', '-ndm', 3, '-ndf', 3)
 ops.uniaxialMaterial('Elastic', 1, E)
 
 for i, v in enumerate(nodes):
@@ -143,9 +143,6 @@ for i, ele in enumerate(elements):
 
 bcarray = np.array(ebc)
 nodes_bc = bcarray[:, 0]
-for node in range(len(nodes)):
-    if node not in nodes_bc:
-        ops.fix(node, 0, 0, 0, 1, 1, 1)
 for bc in ebc:
     ops.fix(*bc)
 
@@ -161,7 +158,7 @@ ops.numberer('RCM')
 ops.algorithm('Newton')
 ops.test('NormDispIncr', 1.0e-3, 100)
 # ops.integrator('LoadControl', 0.1)
-ops.integrator('DisplacementControl', nbc[0][0], 3, -0.5)
+ops.integrator('MGDCM', 0.0005, 4, 2, 1)
 ops.analysis('Static')
 fig = plt.figure(figsize=[12, 5])
 ax = fig.add_subplot(1, 1, 1, projection='3d')
@@ -203,10 +200,6 @@ try:
         disp_z = ops.nodeDisp(nbc[0][0], 3)
         if i % 10 == 0:
             draw()
-        if abs(disp_z) > 34 and flag:
-            print(f"Switching to arclength {i}")
-            ops.integrator('ArcLength', 0.2, 0.1)
-            flag = False
 
         print(f"{i},{lam},{disp_z}")
         data['step'].append(i)

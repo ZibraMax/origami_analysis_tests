@@ -110,7 +110,7 @@ def D(radians): return radians * 180.0 / np.pi
 THETA_1 = R(10)
 THETA_2 = R(350)
 
-data = json.load(open('./shell_and_hinge/instability_1/geometry.json'))
+data = json.load(open('./shell_and_hinge/instability_1/geometry2.json'))
 nodes = data['nodes']
 dictionary = data['dictionary']
 types = data['types']
@@ -153,11 +153,14 @@ dictionary_shells = [i for i, etype in enumerate(
     data['types']) if etype != "OriHinge"]
 dictionary_hinges = [i for i, etype in enumerate(
     data['types']) if etype == "OriHinge"]
-dictionary = np.array(dictionary).astype(
-    int)[dictionary_shells + dictionary_hinges[::2]].tolist()
-types = np.array(types)[dictionary_shells +
-                        dictionary_hinges[::2]].tolist()
+ndictionary = [dictionary[i]
+               for i in dictionary_shells + dictionary_hinges[::2]]
 
+ntypes = [types[i]
+          for i in dictionary_shells + dictionary_hinges[::2]]
+
+dictionary = ndictionary
+types = ntypes
 EXTRA_NODES = True
 if EXTRA_NODES:
     nodes, dictionary, pairs_constraints = create_extra_nodes_for_hinges(
@@ -201,7 +204,8 @@ ops.numberer('RCM')
 ops.constraints('Plain')
 ops.test('NormDispIncr', 1.0e-3, 100)
 # ops.integrator('LoadControl', 0.1)
-ops.integrator('DisplacementControl', nbc[0][0], 3, -0.1)
+# ops.integrator('DisplacementControl', nbc[0][0], 3, -0.1)
+ops.integrator('MGDCM', 0.001, 15, 3, 1)
 ops.algorithm('Newton')
 ops.analysis('Static')
 
@@ -218,7 +222,7 @@ ax = fig.add_subplot(projection='3d')
 visualize(ax=ax, undeformed=False, node_labels=True)
 plt.tight_layout()
 plt.show()
-
+flag = True
 fig = plt.figure(figsize=[12, 5])
 ax = fig.add_subplot(1, 2, 1, projection='3d')
 try:
@@ -229,10 +233,9 @@ try:
         lam = ops.getLoadFactor(1)
         # theta = ops.eleResponse(len(dictionary)-2, 'theta')
         disp_z = ops.nodeDisp(nbc[0][0], 3)
-        if abs(disp_z) > 35:
-            print(f"Switching to arclength {i}")
-            ops.integrator('ArcLength', 0.01, 0.01)
-
+        if abs(disp_z) > 35 and flag:
+            ops.integrator('MGDCM', 0.001, 15, 3, 1)
+            flag = False
         print(f"{i},{lam},{disp_z}")
         data['step'].append(i)
         data['load_factor'].append(lam)
