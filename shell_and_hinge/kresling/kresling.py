@@ -4,10 +4,11 @@ import matplotlib.pyplot as plt
 import json
 import matplotlib
 matplotlib.use('TkAgg')
-
+EXTRA_NODES = True
 A_MODIFIER_STIFF = 1e8
 ELE_TYPES = {}
 LOADS = {}
+t = 2
 
 
 def get_disp_vector():
@@ -17,12 +18,45 @@ def get_disp_vector():
     for j in nodes:
         U_NODES.extend(ops.nodeDisp(j))
     U_NODES = np.array(U_NODES)
-    U_NODES = U_NODES.reshape((3*len(nodes), 1))
+    U_NODES = U_NODES.reshape((6*len(nodes), 1))
     # Get integrator name
     return {
         "info": {"solver-type": "int_name", "ld": lam},
         "U": U_NODES.tolist(),
     }
+
+
+def create_extra_nodes_for_hinges(nodes, elemements, types):
+    if not isinstance(nodes, np.ndarray):
+        nodes = np.array(nodes)
+    nodes = nodes.tolist()
+    nodes_hinges_middle = []
+    nodes_to_element = {}
+    tie_nodes = []
+    for i, etype in enumerate(types):
+        if etype == "OriHinge":
+            n1, n2, n3, n4 = elemements[i]
+            nodes_hinges_middle.append(n2)
+            nodes_hinges_middle.append(n3)
+        else:
+            element = elemements[i]
+            for n in element:
+                if n not in nodes_to_element:
+                    nodes_to_element[n] = []
+                nodes_to_element[n].append(i)
+    nodes_hinges_middle = list(set(nodes_hinges_middle))
+    for node in nodes_hinges_middle:
+        connected_elements = nodes_to_element[node]
+        number_conected = len(connected_elements)
+        for i in range(number_conected - 1):
+            new_node_id = len(nodes)
+            nodes.append(nodes[node])
+            tie_nodes.append((node, new_node_id))
+            elem_idx = connected_elements[i+1]
+            pos_new_node = elemements[elem_idx].index(node)
+            elemements[elem_idx][pos_new_node] = new_node_id
+
+    return np.array(nodes), elemements, tie_nodes
 
 
 def visualize(ax=None, undeformed=False, node_labels=False, plot_hinges=True):
@@ -89,9 +123,17 @@ def visualize(ax=None, undeformed=False, node_labels=False, plot_hinges=True):
 
 def create_model_from_json(file_path):
     data = json.load(open(file_path, 'r'))
+
     nodes = np.array(data['nodes'])
     dictionary = data['dictionary']
     types = data['types']
+
+    if EXTRA_NODES:
+        nodes, dictionary, tie_nodes = create_extra_nodes_for_hinges(
+            nodes, dictionary, types)
+        data['nodes'] = nodes.tolist()
+        data['dictionary'] = dictionary
+        data['tie_nodes'] = tie_nodes
     interior_bars = data['interior_bars']
     exterior_bars = data['exterior_bars']
     base_bars = data['base_bars']
@@ -103,33 +145,35 @@ def create_model_from_json(file_path):
     properties = data['properties']
 
     E = properties['E']
-    A = properties['A']
+    v = properties['v']
     kf = properties['kf']
 
-    if not isinstance(A, list):
-        A = [A]*len(dictionary)
+    if not isinstance(v, list):
+        v = [v]*len(dictionary)
     if not isinstance(E, list):
         E = [E]*len(dictionary)
     if not isinstance(kf, list):
         kf = [kf]*len(dictionary)
-    assert len(A) == len(
-        dictionary), f"Length of A ({len(A)}) does not match number of elements ({len(dictionary)})"
+    assert len(v) == len(
+        dictionary), f"Length of v ({len(v)}) does not match number of elements ({len(dictionary)})"
     assert len(E) == len(
         dictionary), f"Length of E ({len(E)}) does not match number of elements ({len(dictionary)})"
     assert len(kf) == len(
         dictionary), f"Length of kf({len(kf)}) does not match number of elements ({len(dictionary)})"
 
     data["properties"]["E"] = E
+    data["properties"]["v"] = v
     data["properties"]["kf"] = kf
     ops.wipe()
     ops.model('basic', '-ndm', 3, '-ndf', nvn)
 
-    materials = np.unique(E).tolist()
+    materials = list(set(list(zip(E, v))))
     for i, e in enumerate(materials):
-        ops.uniaxialMaterial("Elastic", i, float(e))
+        ops.section('ElasticMembranePlateSection', i, *e, t)
 
+    ops.uniaxialMaterial("Elastic", 999, 1)
     element_to_material = {}
-    for i, e in enumerate(E):
+    for i, e in enumerate(zip(E, v)):
         idx = materials.index(e)
         element_to_material[i] = idx
 
@@ -140,20 +184,25 @@ def create_model_from_json(file_path):
         ELE_TYPES[nel] = etype
         if etype == "OriHinge":
             ops.element("OriHinge", nel, *elem_nodes, kf[i], theta_1, theta_2)
-        elif etype == "CorotTruss" or etype == "Truss":
-            if elem_nodes in base_bars:
-                A[i] = A[i]*A_MODIFIER_STIFF
-            ops.element(etype, nel, *elem_nodes, A[i], element_to_material[i])
-    data["properties"]["A"] = A
+        elif etype == "ShellT" or etype == "ASDShellT3":
+            ops.element("ASDShellT3", nel, *elem_nodes, element_to_material[i])
+    for i, e in enumerate(base_bars):
+        # Add bars as infinite stiff
+        nel = len(ops.getEleTags())
+        ELE_TYPES[nel] = "CorotTruss"
+        ops.element("CorotTruss", nel, *e, A_MODIFIER_STIFF, 999)
 
     for bc in ebc:
         ops.fix(*bc)
+    if EXTRA_NODES:
+        for bc in tie_nodes:
+            ops.equalDOF(bc[0], bc[1], 1, 2, 3)
 
     return data, materials
 
 
 if __name__ == '__main__':
-    file_path = "./bar_and_hinge/kresling/kresling.json"
+    file_path = "./shell_and_hinge/kresling/kresling.json"
     data, materials = create_model_from_json(file_path)
     data["solutions"] = []
     base_bars = data['base_bars']
@@ -172,17 +221,17 @@ if __name__ == '__main__':
 
     # Fix bottom base nodes
     for node in nodes_bottom_base:
-        ops.fix(node, 1, 1, 1)
+        ops.fix(node, 1, 1, 1, 0, 0, 0)
 
     # Equal Z dof for top base nodes
-    for i in range(1, len(nodes_top_base)):
-        ops.equalDOF(nodes_top_base[0], nodes_top_base[i], 3)
+    # for i in range(1, len(nodes_top_base)):
+    #     ops.equalDOF(nodes_top_base[0], nodes_top_base[i], 3)
 
     ops.timeSeries('Linear', 1)
     ops.pattern('Plain', 1, 1)
     P = 1
     for node in nodes_top_base:
-        ops.load(node, 0, 0, -P/len(nodes_top_base))
+        ops.load(node, 0, 0, -P/len(nodes_top_base), 0, 0, 0)
         LOADS[node] = [0, 0, -P/len(nodes_top_base)]
 
     ops.system('BandGeneral')
@@ -193,7 +242,7 @@ if __name__ == '__main__':
     M = 100
     ops.integrator('DisplacementControl', nodes_top_base[0], 3, -20/M)
     # ops.integrator('LoadControl', 0.7)
-    ops.integrator("MGDCM", 0.1, 6, 2, 1)
+    # ops.integrator("MGDCM", 0.1, 6, 2, 1)
     ops.algorithm('Newton')
     ops.analysis('Static')
 
@@ -205,7 +254,7 @@ if __name__ == '__main__':
     fig = plt.figure(figsize=[12, 6])
     ax = fig.add_subplot(1, 2, 1, projection='3d')
     ax2 = fig.add_subplot(1, 2, 2)
-    N = 1
+    N = 2
     nodes_with_loads = list(LOADS.keys())
     res = {"step": [], "load_factor": [], "disp": []}
     try:
@@ -229,9 +278,9 @@ if __name__ == '__main__':
 
     # Change the types as follows: CorotTruss -> L1V, OriHinge -> OH
 
-    data["types"] = ["L1V" if t == "CorotTruss" else "OH" for t in data["types"]]
+    data["types"] = ["T1V" if t == "ASDShellT3" else "OH" for t in data["types"]]
 
-    json.dump(data, open('./output/kresling_bah.json', 'w'))
+    json.dump(data, open('./output/kresling_sah.json', 'w'))
     visualize(ax=ax, plot_hinges=False)
 
     ax2.plot(res['disp'], res['load_factor'], 'r-')
