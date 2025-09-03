@@ -11,18 +11,6 @@ LOADS = {}
 t = 10
 
 
-def test_point_vertices(vertex, vertices, tol=1e-10):
-    if len(vertices) == 0:
-        return False, None
-    vertex = np.array(vertex)
-    vertices = np.array(vertices)
-
-    distances = np.linalg.norm(vertices-vertex, axis=1)
-    if np.min(distances) < tol:
-        return True, np.argmin(distances)
-    return False, None
-
-
 def get_disp_vector():
     U_NODES = []
     nodes = ops.getNodeTags()
@@ -50,15 +38,6 @@ def create_extra_nodes_for_hinges(nodes, elemements, types):
             n1, n2, n3, n4 = elemements[i]
             nodes_hinges_middle.append(n2)
             nodes_hinges_middle.append(n3)
-            # Center of n2 and n3
-            new_node = (np.array(nodes[n2]) + np.array(nodes[n3])) / 2
-            res, idx_new_node = test_point_vertices(new_node, nodes, tol=1e-2)
-            if res:
-                nodes_hinges_middle.append(int(idx_new_node))
-            else:
-                print(new_node, idx_new_node)
-                raise ValueError("Hinge middle node not found in nodes list")
-
         else:
             element = elemements[i]
             for n in element:
@@ -218,15 +197,13 @@ def create_model_from_json(file_path):
         ops.fix(*bc)
     if EXTRA_NODES:
         for bc in tie_nodes:
-            if bc[0] != bc[1]:
-                print(bc)
-                ops.equalDOF(bc[0], bc[1], 1, 2, 3)
+            ops.equalDOF(bc[0], bc[1], 1, 2, 3)
 
     return data, materials
 
 
 if __name__ == '__main__':
-    file_path = "./shell_and_hinge/kresling/kresling.json"
+    file_path = "./shell_and_hinge/kresling/rigid_kresling.json"
     data, materials = create_model_from_json(file_path)
     data["solutions"] = []
     base_bars = data['base_bars']
