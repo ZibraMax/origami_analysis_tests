@@ -4,11 +4,39 @@ import matplotlib.pyplot as plt
 import json
 import matplotlib
 matplotlib.use('TkAgg')
-EXTRA_NODES = False
+EXTRA_NODES = True
 A_MODIFIER_STIFF = 1e10
 ELE_TYPES = {}
 LOADS = {}
 t = 10
+
+
+def discretize_triangle(vertices, n):
+    v1, v2, v3 = np.array(vertices)
+    nodes = []
+    node_index = {}
+
+    for i in range(n+1):
+        for j in range(n+1-i):
+            k = n - i - j
+            point = (i/n)*v1 + (j/n)*v2 + (k/n)*v3
+            idx = len(nodes)
+            nodes.append(point)
+            node_index[(i, j, k)] = idx
+
+    elements = []
+    for i in range(n):
+        for j in range(n-i):
+            k = n - i - j
+            a = (i, j, k)
+            b = (i+1, j, k-1)
+            c = (i, j+1, k-1)
+            d = (i+1, j+1, k-2)
+            if k > 0:
+                elements.append([node_index[a], node_index[b], node_index[c]])
+            if k > 1:
+                elements.append([node_index[b], node_index[d], node_index[c]])
+    return np.array(nodes), elements
 
 
 def test_point_vertices(vertex, vertices, tol=1e-10):
@@ -61,11 +89,16 @@ def create_extra_nodes_for_hinges(nodes, elemements, types):
     for i, etype in enumerate(types):
         if etype == "OriHinge":
             n1, n2, n3, n4 = elemements[i]
-            # nodes_hinges_middle.append(n2)
-            # nodes_hinges_middle.append(n3)
-            for j, node in enumerate(nodes):
-                if point_on_line_from_two_points(node, nodes[n2], nodes[n3], tol=1e-10):
-                    nodes_hinges_middle.append(j)
+            nodes_hinges_middle.append(n2)
+            nodes_hinges_middle.append(n3)
+            # Center of n2 and n3
+            new_node = (np.array(nodes[n2]) + np.array(nodes[n3])) / 2
+            res, idx_new_node = test_point_vertices(new_node, nodes, tol=1e-2)
+            if res:
+                nodes_hinges_middle.append(int(idx_new_node))
+            else:
+                print(new_node, idx_new_node)
+                raise ValueError("Hinge middle node not found in nodes list")
 
         else:
             element = elemements[i]
@@ -158,23 +191,91 @@ def create_model_from_json(file_path):
     types = data['types']
     interior_bars = data['interior_bars']
     exterior_bars = data['exterior_bars']
-    if EXTRA_NODES:
-        nodes, dictionary, tie_nodes = create_extra_nodes_for_hinges(
-            nodes, dictionary, types)
-        data['nodes'] = nodes.tolist()
-        data['dictionary'] = dictionary
-        to_remove = []
-        for i, tie in enumerate(tie_nodes):
-            for line in exterior_bars:
-                if tie[0] not in line and tie[1] not in line:
-                    if point_on_line_from_two_points(nodes[tie[1]], nodes[line[0]], nodes[line[1]], tol=1e-10):
-                        to_remove.append(i)
-                        print(
-                            f"Removing tie {tie} as it is on exterior bar {line}")
-        to_remove = list(set(to_remove))
-        tie_nodes = [tie for i, tie in enumerate(
-            tie_nodes) if i not in to_remove]
-        data['tie_nodes'] = tie_nodes
+    # Sub discretize elements
+    n = 2
+    subdomains = []
+    for i, element in enumerate(data['dictionary']):
+        if data['types'][i] == "ASDShellT3":
+            v1 = nodes[element[0]]
+            v2 = nodes[element[1]]
+            v3 = nodes[element[2]]
+            subdomain = {}
+            new_nodes, new_elements = discretize_triangle(
+                [v1, v2, v3], n)
+            subdomain['nodes'] = new_nodes
+            subdomain['elements'] = new_elements
+            subdomain['type'] = "ASDShellT3"
+            subdomains.append(subdomain)
+
+    new_nodes = []
+    new_elements = []
+    new_types = []
+    for sub in subdomains:
+        sub_nodes = sub['nodes']
+        sub_elements = sub['elements']
+        sub_type = sub['type']
+        index_offset = len(new_nodes)
+        # Add new nodes including duplicates
+        for node in sub_nodes:
+            new_nodes.append(node)
+        # Add new elements with offset
+        for elem in sub_elements:
+            a = 0
+            new_elem = [idx + index_offset for idx in elem]
+            elem[:] = [int(i) for i in new_elem]
+            new_elements.append(elem)
+            new_types.append(sub_type)
+
+    # Update hinges with new nodes
+    for i, etype in enumerate(types):
+        if etype == "OriHinge":
+            n1, n2, n3, n4 = dictionary[i]
+            v1 = nodes[n1]
+            v2 = nodes[n2]
+            v3 = nodes[n3]
+            v4 = nodes[n4]
+            idxn1 = test_point_vertices(v1, new_nodes, tol=1e-9)[1]
+            idxn2 = test_point_vertices(v2, new_nodes, tol=1e-9)[1]
+            idxn3 = test_point_vertices(v3, new_nodes, tol=1e-9)[1]
+            idxn4 = test_point_vertices(v4, new_nodes, tol=1e-9)[1]
+            if None in [idxn1, idxn2, idxn3, idxn4]:
+                raise ValueError(
+                    f"Hinge nodes not found in new nodes list: {n1},{n2},{n3},{n4}")
+            new_elements.append([idxn1, idxn2, idxn3, idxn4])
+            new_types.append(etype)
+    new_interior_bars = []
+    for bar in interior_bars:
+        n1, n2 = bar
+        v1 = nodes[n1]
+        v2 = nodes[n2]
+        idxn1 = test_point_vertices(v1, new_nodes, tol=1e-9)[1]
+        idxn2 = test_point_vertices(v2, new_nodes, tol=1e-9)[1]
+        if None in [idxn1, idxn2]:
+            raise ValueError(
+                f"Interior bar nodes not found in new nodes list: {n1},{n2}")
+        new_interior_bars.append([idxn1, idxn2])
+    new_exterior_bars = []
+    for bar in exterior_bars:
+        n1, n2 = bar
+        v1 = nodes[n1]
+        v2 = nodes[n2]
+        idxn1 = test_point_vertices(v1, new_nodes, tol=1e-9)[1]
+        idxn2 = test_point_vertices(v2, new_nodes, tol=1e-9)[1]
+        if None in [idxn1, idxn2]:
+            raise ValueError(
+                f"Exterior bar nodes not found in new nodes list: {n1},{n2}")
+        new_exterior_bars.append([idxn1, idxn2])
+    tie_nodes = []
+    for i in range(len(subdomains)):
+        subi = subdomains[i % len(subdomains)]
+        subip1 = subdomains[(i+1) % len(subdomains)]
+
+    data['interior_bars'] = new_interior_bars
+    data['exterior_bars'] = new_exterior_bars
+    data['nodes'] = np.array(new_nodes).tolist()
+    data['dictionary'] = new_elements
+    data['types'] = new_types
+
     base_bars = data['base_bars']
     ebc = data['ebc']
     nbc = data['nbc']
