@@ -8,7 +8,7 @@ EXTRA_NODES = True
 A_MODIFIER_STIFF = 1e10
 ELE_TYPES = {}
 LOADS = {}
-t = 10
+t = 1
 
 
 def discretize_triangle(vertices, n):
@@ -406,7 +406,7 @@ def create_model_from_json(file_path, n=2):
 
 
 if __name__ == '__main__':
-    file_path = "./shell_and_hinge/kresling/kresling_discretized.json"
+    file_path = "./shell_and_hinge/kresling/kresling_discretized2.json"
     data, materials = create_model_from_json(file_path, 3)
 
     # Plot nodes
@@ -486,7 +486,7 @@ if __name__ == '__main__':
     ops.test('NormDispIncr', 1.0e-3, 100)
 
     M = 100
-    ops.integrator('DisplacementControl', nodes_top_base[0], 3, -15/M)
+    ops.integrator('DisplacementControl', nodes_top_base[0], 3, -70/M)
     # ops.integrator('LoadControl', 0.7)
     # ops.integrator("MGDCM", 100, 6, 3, 1)
     ops.algorithm('Newton')
@@ -526,7 +526,7 @@ if __name__ == '__main__':
 
     data["types"] = ["T1V" if t == "ASDShellT3" else "OH" for t in data["types"]]
 
-    json.dump(data, open('./output/discretized_kresling_sah.json', 'w'))
+    json.dump(data, open('./output/discretized_kresling_sah2.json', 'w'))
     visualize(ax=ax, plot_hinges=False)
 
     ax2.plot(res['disp'], res['load_factor'], 'r-')
