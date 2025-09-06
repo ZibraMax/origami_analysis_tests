@@ -8,7 +8,7 @@ EXTRA_NODES = True
 A_MODIFIER_STIFF = 1e10
 ELE_TYPES = {}
 LOADS = {}
-t = 1
+t = 0.2
 
 
 def discretize_triangle(vertices, n):
@@ -324,6 +324,7 @@ def create_model_from_json(file_path, n=2):
     data['dictionary'] = new_elements
     data['types'] = new_types
     data['base_bars'] = new_base_bars
+    data["tie_nodes"] = tie_nodes
 
     nodes = np.array(data['nodes'])
     dictionary = data['dictionary']
@@ -398,16 +399,20 @@ def create_model_from_json(file_path, n=2):
 
     for bc in ebc:
         ops.fix(*bc)
+    already_constrained = []
     if EXTRA_NODES:
         for bc in tie_nodes:
-            ops.equalDOF(bc[0], bc[1], 1, 2, 3)
+            # Avboid duplicate constraints
+            if bc not in already_constrained and (bc[1], bc[0]) not in already_constrained:
+                ops.equalDOF(bc[0], bc[1], 1, 2, 3)
+                already_constrained.append(bc)
 
     return data, materials
 
 
 if __name__ == '__main__':
     file_path = "./shell_and_hinge/kresling/kresling_discretized2.json"
-    data, materials = create_model_from_json(file_path, 3)
+    data, materials = create_model_from_json(file_path, 2)
 
     # Plot nodes
     fig = plt.figure(figsize=[6, 6])
@@ -483,12 +488,12 @@ if __name__ == '__main__':
     ops.system('BandGeneral')
     ops.numberer('RCM')
     ops.constraints('Plain')
-    ops.test('NormDispIncr', 1.0e-3, 100)
+    ops.test('NormDispIncr', 1.0e-3, 500)
 
-    M = 100
+    M = 500
     ops.integrator('DisplacementControl', nodes_top_base[0], 3, -70/M)
     # ops.integrator('LoadControl', 0.7)
-    # ops.integrator("MGDCM", 100, 6, 3, 1)
+    # ops.integrator("MGDCM", 1, 6, 4, 1)
     ops.algorithm('Newton')
     ops.analysis('Static')
 
@@ -503,6 +508,7 @@ if __name__ == '__main__':
     N = 2
     nodes_with_loads = list(LOADS.keys())
     res = {"step": [], "load_factor": [], "disp": []}
+    flag = True
     try:
         for i in range(0, M+1):
             if i != 0:

@@ -398,9 +398,13 @@ def create_model_from_json(file_path, n=2):
 
     for bc in ebc:
         ops.fix(*bc)
+    already_constrained = []
     if EXTRA_NODES:
         for bc in tie_nodes:
-            ops.equalDOF(bc[0], bc[1], 1, 2, 3)
+            # Avboid duplicate constraints
+            if bc not in already_constrained and (bc[1], bc[0]) not in already_constrained:
+                ops.equalDOF(bc[0], bc[1], 1, 2, 3)
+                already_constrained.append(bc)
 
     return data, materials
 
