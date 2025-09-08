@@ -10,8 +10,8 @@ class Element():
         self.gdl = []
 
     def set_domanin(self, domain):
-        self.coords = domain.nodes[self.nodes]
-        self.gdl = domain.gdls[self.nodes]
+        self.coords = domain.base_nodes[self.nodes]
+        self.gdl = domain.base_gdls[self.nodes]
 
 
 class Bar(Element):

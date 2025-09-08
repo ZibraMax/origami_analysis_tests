@@ -33,6 +33,7 @@ class Geometry():
         self.bars: Bar = []
         self.hinges: Hinge = []
         self.openings: Opening = []
+        self.meshed = False
         self.ebc = []
         self.nbc = []
         self.tie_nodes = []
@@ -99,9 +100,52 @@ class Geometry():
         opening.set_domanin(self)
         self.openings.append(opening)
 
+    def add_ebc(self, node, values=None):
+        if values is None:
+            values = [0]*self.ngdl_per_node
+        if len(values) != self.ngdl_per_node:
+            values = values + [0]*(self.ngdl_per_node - len(values))
+        self.ebc.append([node, *values])
+
+    def add_nbc(self, node, values=None):
+        if values is None:
+            values = [0]*self.ngdl_per_node
+        if len(values) != self.ngdl_per_node:
+            values = values + [0]*(self.ngdl_per_node - len(values))
+        self.nbc.append([node, *values])
+
+    def add_bc_plane(self, plane='z', coord=0.0, values=None, tol=1e-8):
+        if not self.meshed:
+            raise ValueError(
+                "Geometry must be meshed before adding boundary conditions.")
+        if plane not in ['x', 'y', 'z']:
+            raise ValueError("Plane must be 'x', 'y', or 'z'.")
+        axis = {'x': 0, 'y': 1, 'z': 2}[plane]
+        for i, node in enumerate(self.nodes):
+            if abs(node[axis]-coord) < tol:
+                self.add_ebc(i, values=values)
+
+    def add_tie_nodes(self, node1, node2, dofs=None):
+        if dofs is None:
+            dofs = list(range(self.ngdl_per_node))
+        self.tie_nodes.append((node1, node2, *dofs))
+
+    def mesh(self, n=1):
+        if self.meshed:
+            return
+        if n == 1:
+            self.nodes = self.base_nodes.copy()
+            self.gdls = self.base_gdls.copy()
+            self.meshed = True
+            return
+
     @staticmethod
-    def from_json(file_path, t=0.2):
+    def from_json_file(file_path, t=0.2):
         data = json.load(open(file_path, 'r'))
+        return Geometry.from_json(data, t=t)
+
+    @staticmethod
+    def from_json(data, t=0.2):
         O = Geometry(ngdl_per_node=6)
         nodes = np.array(data['nodes'])
         dictionary = data['dictionary']

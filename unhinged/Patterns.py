@@ -4,6 +4,10 @@ import matplotlib.pyplot as plt
 
 class Kresling():
     def __init__(self, b, H0, H1, n):
+        self.b = b
+        self.H0 = H0
+        self.H1 = H1
+        self.n = n
         pi_n = np.pi / n
         cot_pi_n = 1 / np.tan(pi_n)
         if abs(H1**1-H0**2) <= b**2*cot_pi_n**2:
@@ -26,8 +30,143 @@ class Kresling():
         phi1 = 2*np.arctan(x1)
         phi0 = 2*np.arctan(x2)
 
-    # return {
-    #     "phi0": phi0,
-    #     "phi1": phi1,
-    #     "alpha": alpha
-    # }
+        self.props = {
+            "phi0": phi0,
+            "phi1": phi1,
+            "alpha": alpha
+        }
+
+    def rotate_z_axis(self, point, angle):
+        """Rotate a point around the Z-axis by a given angle in radians."""
+        x, y, z = point
+        cos_angle = np.cos(angle)
+        sin_angle = np.sin(angle)
+        x_rotated = x * cos_angle - y * sin_angle
+        y_rotated = x * sin_angle + y * cos_angle
+        return [float(x_rotated), float(y_rotated), float(z)]
+
+    def generate(self, get_panels=True, get_int_hinges=True, get_ext_hinges=True, get_base_bars=True, get_int_lines=True, get_ext_lines=True):
+        design = self.props
+        phi0 = design["phi0"]
+        phi1 = design["phi1"]
+        alpha = design["alpha"]
+        b = self.b
+        H0 = self.H0
+        H1 = self.H1
+        n = self.n
+
+        kresling = {}
+        kresling["nodes"] = []
+        kresling["triangles"] = []
+        kresling["base_lines"] = []
+        kresling["interior_lines"] = []
+        kresling["exterior_lines"] = []
+        kresling["interior_hinges"] = []
+        kresling["exterior_hinges"] = []
+
+        nodes = kresling["nodes"]
+        triangles = kresling["triangles"]
+        ext_lines = kresling["exterior_lines"]
+        int_lines = kresling["interior_lines"]
+        int_hinges = kresling["interior_hinges"]
+        ext_hinges = kresling["exterior_hinges"]
+        base_lines = kresling["base_lines"]
+
+        # Create base and top polygons in 3D coordinates
+        for i in range(n):
+            angle = 2 * np.pi * i / n
+            x_base = b * np.cos(angle)
+            y_base = b * np.sin(angle)
+            nodes.append([float(x_base), float(y_base), 0.0])
+
+        for i in range(n):
+            angle = 2 * np.pi * i / n
+            x_base = b * np.cos(angle)
+            y_base = b * np.sin(angle)
+            x_top = x_base
+            y_top = y_base
+            coodr = (x_top, y_top, H1)
+            coodr = self.rotate_z_axis(coodr, phi1)
+            nodes.append(coodr)
+
+        m = len(nodes)
+        for i in range(n-1):
+            xi = i
+            xip1 = (i + 1)
+            xipn = (n + i)
+            xipn1 = (n + (i + 1))
+            triangles.append([xi, xip1, xipn1])
+            triangles.append([xi, xipn1, xipn])
+
+        for i in range(n):
+            base_lines.append([i, (i + 1) % n])           # Base edges
+        for i in range(n):
+            base_lines.append([n + i, n + (i + 1) % n])   # Top edges
+
+        # add panel lines
+        for i in range(n):
+            ext_lines.append([i, n + i])
+            int_lines.append([i, n + (i + 1) % n])
+
+        for i in range(n-1):
+            I = (i-1) % n
+            J = (i) % n
+            K = (i+n) % (2*n)
+            L = (i+n+1) % (2*n)
+            ext_hinges.append([I, J, K, L])
+        ext_hinges.append([n-2, n-1, 2*n-1, n])
+
+        for i in range(n-1):
+            I = (i+n) % (2*n)
+            J = (i+1+n) % (2*n)
+            K = (i) % (n)
+            L = (i+1) % (n)
+            int_hinges.append([I, J, K, L])
+        int_hinges.append([2*n-1, n, n-1, 0])
+
+        triangles.append([n-1, 0, n])
+        triangles.append([n-1, n, m-1])
+
+        # kresling["dictionary"] = triangles + ext_lines + \
+        #     int_lines + int_hinges + ext_hinges + base_lines
+        # kresling["types"] = ["Shell"]*len(triangles) + \
+        #     ["Opening"]*len(ext_lines) + \
+        #     ["Bar"]*len(int_lines) + \
+        #     ["OriHinge"]*len(int_hinges) + \
+        #     ["OriHinge"]*len(ext_hinges) + ["Bar"]*len(base_lines)
+
+        kresling["dictionary"] = []
+        kresling["types"] = []
+        if get_panels:
+            kresling["dictionary"] += triangles
+            kresling["types"] += ["Shell"]*len(triangles)
+        if get_ext_lines:
+            kresling["dictionary"] += ext_lines
+            kresling["types"] += ["Opening"]*len(ext_lines)
+        if get_int_lines:
+            kresling["dictionary"] += int_lines
+            kresling["types"] += ["Bar"]*len(int_lines)
+        if get_int_hinges:
+            kresling["dictionary"] += int_hinges
+            kresling["types"] += ["OriHinge"]*len(int_hinges)
+        if get_ext_hinges:
+            kresling["dictionary"] += ext_hinges
+            kresling["types"] += ["OriHinge"]*len(ext_hinges)
+        if get_base_bars:
+            kresling["dictionary"] += base_lines
+            kresling["types"] += ["Bar"]*len(base_lines)
+
+        kresling["properties"] = {"problem": "ShellAndHinge", }
+
+        return kresling
+
+    def test_point_vertices(self, vertex, vertices, tol=1e-10):
+        if len(vertices) == 0:
+            return False, None
+        vertex = np.array(vertex)
+        vertices = np.array(vertices)
+
+        distances = np.linalg.norm(vertices-vertex, axis=1)
+        if np.min(distances) < tol:
+            return True, int(np.argmin(distances))
+        return False, None
