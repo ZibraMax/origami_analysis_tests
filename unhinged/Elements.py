@@ -26,6 +26,8 @@ class Bar(Element):
 class Hinge(Element):
     def __init__(self, nodes, theta1=R(10), theta2=R(350)):
         super().__init__(nodes)
+        self.theta1 = theta1
+        self.theta2 = theta2
 
 
 class Panel(Element):

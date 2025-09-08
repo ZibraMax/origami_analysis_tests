@@ -1,5 +1,7 @@
+import matplotlib.pyplot as plt
 import numpy as np
-from .Elements import Panel, Bar, Hinge
+import json
+from .Elements import Panel, Bar, Hinge, RectangularPanel, TriangularPanel
 
 
 class Opening(Bar):
@@ -31,6 +33,9 @@ class Geometry():
         self.bars: Bar = []
         self.hinges: Hinge = []
         self.openings: Opening = []
+        self.ebc = []
+        self.nbc = []
+        self.tie_nodes = []
 
         self.nodes = np.zeros((0, 3), dtype=float)
         self.gdls = np.zeros((0, 6), dtype=int)
@@ -66,6 +71,12 @@ class Geometry():
                 duplicates[i] = indices
         return duplicates
 
+    def plot(self, ax=None):
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d')
+        return ax
+
     def add_node(self, coord):
         n = len(self.base_gdls)*self.ngdl_per_node
         gdl = np.arange(n, n+self.ngdl_per_node)
@@ -87,3 +98,35 @@ class Geometry():
     def add_opening(self, opening: Opening):
         opening.set_domanin(self)
         self.openings.append(opening)
+
+    @staticmethod
+    def from_json(file_path, t=0.2):
+        data = json.load(open(file_path, 'r'))
+        O = Geometry(ngdl_per_node=6)
+        nodes = np.array(data['nodes'])
+        dictionary = data['dictionary']
+        types = data['types']
+        for node in nodes:
+            O.add_node(node)
+        for elem_nodes, elem_type in zip(dictionary, types):
+            if elem_type == 'Shell' or "ASDShell" in elem_type:
+                th = data["properties"].get("thickness", t)
+                if len(elem_nodes) == 3:
+                    panel = TriangularPanel(elem_nodes, thickness=th)
+                elif len(elem_nodes) == 4:
+                    panel = RectangularPanel(elem_nodes, thickness=th)
+
+                O.add_panel(panel)
+            elif elem_type == 'Bar' or elem_type == 'L1V':
+                bar = Bar(elem_nodes)
+                O.add_bar(bar)
+            elif elem_type == 'OriHinge':
+                hinge = Hinge(elem_nodes)
+                O.add_hinge(hinge)
+            elif elem_type == 'Opening':
+                opening = Opening(elem_nodes)
+                O.add_opening(opening)
+            else:
+                raise ValueError(f"Unknown element type: {elem_type}")
+
+        return O
