@@ -7,10 +7,10 @@ H = 100
 n = 6
 b = 68
 
-data = Kresling(b=b, H0=0, H1=H, n=n).generate(get_int_lines=False)
+data = Kresling(b=b, H0=H/2, H1=H, n=n).generate(get_int_lines=False)
 
 O = Geometry.from_json(data, t=0.2)
-O.mesh(n=2)
+O.mesh(n=4)
 
 O.add_bc_plane('z', 0.0, values=[1, 1, 1, 0, 0, 0])
 
@@ -40,7 +40,8 @@ model.setup_model()
 
 # Setup solver
 M = 500
-ops.integrator('DisplacementControl', nodes_tie[0], 3, -H/M)
+# ops.integrator('DisplacementControl', nodes_tie[0], 3, -H/M)
+ops.integrator('MGDCM', 0.1, 6, 3, 1)
 ops.algorithm('Newton')
 ops.analysis('Static')
 

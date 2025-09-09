@@ -412,7 +412,7 @@ def create_model_from_json(file_path, n=2):
 
 if __name__ == '__main__':
     file_path = "./shell_and_hinge/kresling/kresling_discretized2.json"
-    data, materials = create_model_from_json(file_path, 2)
+    data, materials = create_model_from_json(file_path, 5)
 
     # Plot nodes
     fig = plt.figure(figsize=[6, 6])

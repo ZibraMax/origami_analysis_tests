@@ -252,6 +252,7 @@ class Geometry():
         self.dictionary = elements
         self.tie_nodes = tie_nodes
         self.types = types
+        properties["problem"] = "ShellAndHinge"
         self.properties = properties
         self.gdls = np.zeros((len(self.nodes), self.ngdl_per_node), dtype=int)
 
@@ -299,8 +300,8 @@ class Geometry():
         return O
 
     def to_json(self):
-        dicttypes = {"Shell": "T1V", "Bar": "L1V",
-                     "OriHinge": "OH", "Opening": "L1V"}
+        dicttypes = {"Shell": "T1V", "Bar": "OH",
+                     "OriHinge": "OH", "Opening": "OH"}
         if not self.meshed:
             raise ValueError(
                 "Geometry must be meshed before exporting to JSON.")
