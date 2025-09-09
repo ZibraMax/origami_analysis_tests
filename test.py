@@ -12,9 +12,11 @@ O = Geometry.from_json(data, t=0.2)
 O.mesh(n=2)
 
 O.add_bc_plane('z', 0.0, values=[1, 1, 1, 0, 0, 0])
-O.add_load_plane('z', H, values=[0, 0, -1/6, 0, 0, 0])
 
 nodes_tie = O.get_nodes_plane('z', H, tol=1e-3)
+print("Nodes at the top plane:", nodes_tie)
+
+O.add_load_plane('z', H, values=[0, 0, -1/len(nodes_tie), 0, 0, 0])
 
 model = ShellAndHinge(O)
 model.add_material_shells(mat_tag=1, E=100, v=0.3)
@@ -22,7 +24,7 @@ model.add_material_bars(mat_tag=2, E=1e9, A=1.0)
 model.add_material_hinges(k=0.00)
 model.create_model()
 for n in nodes_tie[1:]:
-    ops.equalDOF(nodes_tie[0], n, 3)
+    ops.equalDOF(O.node_map[nodes_tie[0]][0], O.node_map[n][0], 3)
 plt.ion()
 fig = plt.figure()
 ax = fig.add_subplot(1, 1, 1, projection='3d')
