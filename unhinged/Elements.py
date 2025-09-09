@@ -1,4 +1,5 @@
 import numpy as np
+from typing import Tuple
 def R(degrees): return degrees * np.pi / 180.0
 def D(radians): return radians * 180.0 / np.pi
 
@@ -8,6 +9,7 @@ class Element():
         self.nodes = nodes
         self.coords = []
         self.gdl = []
+        self.discretized_nodes = []
 
     def set_domanin(self, domain):
         self.coords = domain.base_nodes[self.nodes]
@@ -35,15 +37,16 @@ class Panel(Element):
         self.thickness = thickness
         super().__init__(nodes)
 
-    def discretize(self, n):
+    def mesh(self, n) -> Tuple[np.ndarray, list]:
         pass
 
 
 class RectangularPanel(Panel):
     def __init__(self, nodes, thickness=0.35):
         super().__init__(nodes, thickness)
+        self.opensees_type = 'ASDShellQ4'
 
-    def discretize(self, n):
+    def mesh(self, n) -> Tuple[np.ndarray, list]:
         v1, v2, v3, v4 = np.array(self.coords)
         nodes = []
         node_index = {}
@@ -74,8 +77,9 @@ class RectangularPanel(Panel):
 class TriangularPanel(Panel):
     def __init__(self, nodes, thickness=0.35):
         super().__init__(nodes, thickness)
+        self.opensees_type = 'ASDShellT3'
 
-    def discretize(self, n):
+    def mesh(self, n) -> Tuple[np.ndarray, list]:
         v1, v2, v3 = np.array(self.coords)
         nodes = []
         node_index = {}

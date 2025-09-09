@@ -1,7 +1,14 @@
-import matplotlib.pyplot as plt
-import numpy as np
-import json
+from typing import List
 from .Elements import Panel, Bar, Hinge, RectangularPanel, TriangularPanel
+import json
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('TkAgg')
+
+
+def R(degrees): return degrees * np.pi / 180.0
+def D(radians): return radians * 180.0 / np.pi
 
 
 class Opening(Bar):
@@ -18,6 +25,9 @@ class Opening(Bar):
         point = np.array(point)
         AB = B - A
         AP = point - A
+        if np.linalg.norm(AP) < tol or np.linalg.norm(B - point) < tol:
+            return False  # Returns false if point is on the edge
+
         if np.allclose(AB, 0, atol=tol):
             return np.allclose(AP, 0, atol=tol)
         cross = np.cross(AB, AP)
@@ -29,10 +39,10 @@ class Geometry():
         self.base_nodes = np.zeros((0, 3), dtype=float)
         self.base_gdls = np.zeros((0, 6), dtype=int)
         self.ngdl_per_node: int = ngdl_per_node
-        self.panels: Panel = []
-        self.bars: Bar = []
-        self.hinges: Hinge = []
-        self.openings: Opening = []
+        self.panels: List[Panel] = []
+        self.bars: List[Bar] = []
+        self.hinges: List[Hinge] = []
+        self.openings: List[Opening] = []
         self.meshed = False
         self.ebc = []
         self.nbc = []
@@ -40,6 +50,10 @@ class Geometry():
 
         self.nodes = np.zeros((0, 3), dtype=float)
         self.gdls = np.zeros((0, 6), dtype=int)
+        self.node_map = {}
+        self.dictionary = []
+        self.types = []
+        self.properties = {}
 
     def test_point_vertices(self, vertex, tol=1e-10):
         if len(self.nodes) == 0:
@@ -54,8 +68,8 @@ class Geometry():
     def test_points_vertices(self, point, tol=1e-10):
         if len(self.nodes) == 0:
             return []
-        if not isinstance(vertex, np.ndarray):
-            vertex = np.array(vertex)
+        if not isinstance(point, np.ndarray):
+            point = np.array(point)
         indices = []
         for i, v in enumerate(self.nodes):
             if np.linalg.norm(v-point) < tol:
@@ -101,18 +115,28 @@ class Geometry():
         self.openings.append(opening)
 
     def add_ebc(self, node, values=None):
+        if not self.meshed:
+            raise ValueError(
+                "Geometry must be meshed before adding boundary conditions.")
         if values is None:
-            values = [0]*self.ngdl_per_node
+            values = [1]*self.ngdl_per_node
         if len(values) != self.ngdl_per_node:
             values = values + [0]*(self.ngdl_per_node - len(values))
-        self.ebc.append([node, *values])
+        if self.node_map.get(node) is None:
+            raise ValueError(f"Node {node} not found in geometry.")
+        self.ebc.append([self.node_map[node][0], *values])
 
     def add_nbc(self, node, values=None):
+        if not self.meshed:
+            raise ValueError(
+                "Geometry must be meshed before adding boundary conditions.")
         if values is None:
             values = [0]*self.ngdl_per_node
         if len(values) != self.ngdl_per_node:
             values = values + [0]*(self.ngdl_per_node - len(values))
-        self.nbc.append([node, *values])
+        if self.node_map.get(node) is None:
+            raise ValueError(f"Node {node} not found in geometry.")
+        self.nbc.append([self.node_map[node][0], *values])
 
     def add_bc_plane(self, plane='z', coord=0.0, values=None, tol=1e-8):
         if not self.meshed:
@@ -123,21 +147,120 @@ class Geometry():
         axis = {'x': 0, 'y': 1, 'z': 2}[plane]
         for i, node in enumerate(self.nodes):
             if abs(node[axis]-coord) < tol:
-                self.add_ebc(i, values=values)
+                self.ebc.append([i, *values])
 
-    def add_tie_nodes(self, node1, node2, dofs=None):
+    def add_load_plane(self, plane='z', coord=0.0, values=None, tol=1e-8):
+        if not self.meshed:
+            raise ValueError(
+                "Geometry must be meshed before adding boundary conditions.")
+        if plane not in ['x', 'y', 'z']:
+            raise ValueError("Plane must be 'x', 'y', or 'z'.")
+        axis = {'x': 0, 'y': 1, 'z': 2}[plane]
+        for i, node in enumerate(self.nodes):
+            if abs(node[axis]-coord) < tol:
+                self.nbc.append([i, *values])
+
+    def get_nodes_plane(self, plane='z', coord=0.0, tol=1e-8):
+        if not self.meshed:
+            raise ValueError(
+                "Geometry must be meshed before adding boundary conditions.")
+        if plane not in ['x', 'y', 'z']:
+            raise ValueError("Plane must be 'x', 'y', or 'z'.")
+        axis = {'x': 0, 'y': 1, 'z': 2}[plane]
+        nodes = []
+        for i, node in enumerate(self.nodes):
+            if abs(node[axis]-coord) < tol:
+                nodes.append(i)
+        return nodes
+
+    def add_tie_nodes(self, node1, node2):
         if dofs is None:
             dofs = list(range(self.ngdl_per_node))
-        self.tie_nodes.append((node1, node2, *dofs))
+        self.tie_nodes.append((node1, node2))
 
     def mesh(self, n=1):
         if self.meshed:
             return
-        if n == 1:
-            self.nodes = self.base_nodes.copy()
-            self.gdls = self.base_gdls.copy()
-            self.meshed = True
-            return
+
+        self.nodes = []
+        elements = []
+        tie_nodes = []
+        types = []
+        properties = {}
+        properties["th"] = []
+
+        for panel in self.panels:
+            res = panel.mesh(n=n)
+            sub_nodes = panel.discretized_nodes
+            sub_elements = panel.discretized_elements
+            sub_type = "Shell"
+            sub_thickness = panel.thickness
+            index_offset = len(self.nodes)
+            for node in sub_nodes:
+                self.nodes.append(node)
+            for elem in sub_elements:
+                a = 0
+                new_elem = [idx + index_offset for idx in elem]
+                elem[:] = [int(i) for i in new_elem]
+                elements.append(elem)
+                types.append(sub_type)
+                properties["th"].append(sub_thickness)
+
+        self.nodes = np.array(self.nodes)
+
+        for i, hinge in enumerate(self.hinges):
+            n1, n2, n3, n4 = hinge.nodes
+            v1 = self.base_nodes[n1]
+            v2 = self.base_nodes[n2]
+            v3 = self.base_nodes[n3]
+            v4 = self.base_nodes[n4]
+            idxn1 = self.test_point_vertices(v1)[1]
+            idxn2 = self.test_point_vertices(v2)[1]
+            idxn3 = self.test_point_vertices(v3)[1]
+            idxn4 = self.test_point_vertices(v4)[1]
+            if None in [idxn1, idxn2, idxn3, idxn4]:
+                raise ValueError(
+                    f"Hinge nodes not found in new nodes list: {n1},{n2},{n3},{n4}")
+            elements.append([idxn1, idxn2, idxn3, idxn4])
+            hinge.discretized_nodes = [idxn1, idxn2, idxn3, idxn4]
+            types.append("OriHinge")
+
+        for bar in self.bars:
+            n1, n2 = bar.nodes
+            v1 = self.base_nodes[n1]
+            v2 = self.base_nodes[n2]
+            idxn1 = self.test_point_vertices(v1)[1]
+            idxn2 = self.test_point_vertices(v2)[1]
+            if None in [idxn1, idxn2]:
+                raise ValueError(
+                    f"Interior bar nodes not found in new nodes list: {n1},{n2}")
+            elements.append([idxn1, idxn2])
+            bar.discretized_nodes = [idxn1, idxn2]
+            types.append("Bar")
+
+        duplicates = self.get_index_duplicates()
+        for parent, duplicate_indices in duplicates.items():
+            test_node = self.nodes[duplicate_indices[0]]
+            flag = True
+            for opening in self.openings:
+                if opening.is_interior(test_node):
+                    flag = False
+                    break
+            if flag:
+                for idx in duplicate_indices[1:]:
+                    tie_nodes.append((duplicate_indices[0], idx))
+        self.dictionary = elements
+        self.tie_nodes = tie_nodes
+        self.types = types
+        self.properties = properties
+        self.gdls = np.zeros((len(self.nodes), self.ngdl_per_node), dtype=int)
+
+        self.node_map = {}
+        for i, node in enumerate(self.base_nodes):
+            idxs = self.test_points_vertices(node)
+            self.node_map[i] = idxs
+
+        self.meshed = True
 
     @staticmethod
     def from_json_file(file_path, t=0.2):
@@ -159,18 +282,18 @@ class Geometry():
                     panel = TriangularPanel(elem_nodes, thickness=th)
                 elif len(elem_nodes) == 4:
                     panel = RectangularPanel(elem_nodes, thickness=th)
-
                 O.add_panel(panel)
             elif elem_type == 'Bar' or elem_type == 'L1V':
                 bar = Bar(elem_nodes)
                 O.add_bar(bar)
             elif elem_type == 'OriHinge':
-                hinge = Hinge(elem_nodes)
+                t1 = data["properties"].get("theta1", R(10))
+                t2 = data["properties"].get("theta2", R(350))
+                hinge = Hinge(elem_nodes, theta1=t1, theta2=t2)
                 O.add_hinge(hinge)
             elif elem_type == 'Opening':
                 opening = Opening(elem_nodes)
                 O.add_opening(opening)
             else:
                 raise ValueError(f"Unknown element type: {elem_type}")
-
         return O
