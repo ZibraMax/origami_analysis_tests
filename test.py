@@ -3,68 +3,6 @@ import opensees as ops
 import matplotlib.pyplot as plt
 
 
-def visualize(ax=None, undeformed=False, node_labels=False, plot_hinges=True):
-    if ax is None:
-        fig = plt.figure(figsize=[12, 5])
-        ax = fig.add_subplot(1, 2, 1, projection='3d')
-        plt.axis("off")
-
-    etags = ops.getEleTags()
-    dictionary = [ops.eleNodes(i) for i in etags]
-    for i in etags:
-        etype = ELE_TYPES[i]
-        coords = np.array([ops.nodeCoord(n) for n in dictionary[i]])
-        for j, n in enumerate(dictionary[i]):
-            disp = ops.nodeDisp(n)
-            coords[j, 0] += disp[0]
-            coords[j, 1] += disp[1]
-            coords[j, 2] += disp[2]
-        if etype == "OriHinge" or etype == "BendHinge":
-            if plot_hinges:
-                ax.plot(coords[1:-1, 0], coords[1:-1, 1], coords[1:-1, 2], '--',
-                        color='yellow', linewidth=2, zorder=100)
-        elif etype == "CorotTruss":
-            color = 'blue'
-            if undeformed:
-                color = 'black'
-            ax.plot(coords[:, 0], coords[:, 1], coords[:, 2],
-                    color=color)
-        else:
-            color = 'green'
-            alpha = 0.5
-            if undeformed:
-                color = 'black'
-                alpha = 1
-            coords = np.vstack((coords, coords[0, :]))
-            ax.plot_trisurf(coords[:, 0], coords[:, 1], coords[:, 2],
-                            color=color, alpha=alpha)
-    for i in ops.getNodeTags():
-        coor = ops.nodeCoord(i) + np.array(ops.nodeDisp(i))[:3]
-        color = 'yellow'
-        size = 0
-        ax.scatter(coor[0], coor[1], coor[2], color=color, s=size)
-        if node_labels:
-            ax.text(coor[0], coor[1], coor[2], str(i), color='red', fontsize=8)
-    if undeformed:
-        # # Plot loads as unit lengt arrows in plot coords
-        # for node, load in LOADS.items():
-        #     coor = np.array(ops.nodeCoord(node))
-        #     load = np.array(load)
-        #     if np.linalg.norm(load) > 0:
-        #         load = load / np.linalg.norm(load) * 0.1 * np.linalg.norm(np.array(ops.nodeCoord(
-        #             ops.getNodeTags()[-1])) - np.array(ops.nodeCoord(ops.getNodeTags()[0])))
-        #         coor = coor - load
-        #         ax.quiver(coor[0], coor[1], coor[2], load[0], load[1],
-        #                   load[2], color='red', arrow_length_ratio=0.5, linewidth=2)
-
-        ax.axis('off')
-
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
-    ax.set_aspect('equal')
-
-
 H = 70
 n = 6
 b = 68
@@ -85,7 +23,14 @@ model.add_material_hinges(k=0.00)
 model.create_model()
 for n in nodes_tie[1:]:
     ops.equalDOF(nodes_tie[0], n, 3)
+plt.ion()
+fig = plt.figure()
+ax = fig.add_subplot(1, 1, 1, projection='3d')
+model.visualize(ax=ax, undeformed=True, node_labels=True)
+plt.show()
+a = 0
 
+# self.geometry.tie_nodes
 
 ops.system('BandGeneral')
 ops.numberer('RCM')

@@ -1,6 +1,7 @@
 import numpy as np
 import opensees as ops
 from .Geometry import Geometry, RectangularPanel, TriangularPanel
+import matplotlib.pyplot as plt
 
 
 class ShellAndHinge():
@@ -109,3 +110,74 @@ class ShellAndHinge():
     def create_ties(self, tie_type=[1, 2, 3]):
         for tie in self.geometry.tie_nodes:
             ops.equalDOF(tie[0], tie[1], *tie_type)
+
+    def visualize(self, ax=None, undeformed=False, node_labels=False, plot_hinges=True):
+        if ax is None:
+            fig = plt.figure(figsize=[12, 5])
+            ax = fig.add_subplot(1, 2, 1, projection='3d')
+            plt.axis("off")
+
+        for panel in self.geometry.panels:
+            for shell in panel.discretized_elements:
+
+                coords = np.array([self.geometry.nodes[n] for n in shell])
+                coords = coords.copy()
+                for j, n in enumerate(shell):
+                    disp = ops.nodeDisp(n)
+                    coords[j, 0] += disp[0]*(1-undeformed)
+                    coords[j, 1] += disp[1]*(1-undeformed)
+                    coords[j, 2] += disp[2]*(1-undeformed)
+                color = 'green'
+                alpha = 0.5
+                if undeformed:
+                    color = 'black'
+                    alpha = 0.8
+                coords = np.vstack((coords, coords[0, :]))
+                ax.plot_trisurf(coords[:, 0], coords[:, 1], coords[:, 2],
+                                color=color, alpha=alpha)
+        for i in ops.getNodeTags():
+            coor = ops.nodeCoord(i) + np.array(ops.nodeDisp(i))[:3]
+            color = 'yellow'
+            size = 0
+            ax.scatter(coor[0], coor[1], coor[2], color=color, s=size)
+            if node_labels:
+                ax.text(coor[0], coor[1], coor[2],
+                        str(i), color='red', fontsize=8)
+        for tie in self.geometry.tie_nodes:
+            c1 = ops.nodeCoord(tie[0])
+            c2 = ops.nodeCoord(tie[0])
+            if c1 != c2:
+                print("Tie nodes are not coincident!")
+            ax.scatter(*c1, color='yellow', s=10)
+        if undeformed:
+            # Plot loads as unit lengt arrows in plot coords
+            for a in self.geometry.nbc:
+                node, load = a[0], a[1:]
+                load = np.array(load)[:3]
+                coor = np.array(ops.nodeCoord(node))
+                load = np.array(load)
+                if np.linalg.norm(load) > 0:
+                    load = load / np.linalg.norm(load) * 0.1 * np.linalg.norm(np.array(ops.nodeCoord(
+                        ops.getNodeTags()[-1])) - np.array(ops.nodeCoord(ops.getNodeTags()[0])))
+                    coor = coor - load
+                    ax.quiver(coor[0], coor[1], coor[2], load[0], load[1],
+                              load[2], color='red', arrow_length_ratio=0.5, linewidth=2)
+
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+        ax.set_aspect('equal')
+
+    def get_disp_vector(self):
+        U_NODES = []
+        nodes = ops.getNodeTags()
+        lam = ops.getLoadFactor(1)
+        for j in nodes:
+            U_NODES.extend(ops.nodeDisp(j))
+        U_NODES = np.array(U_NODES)
+        U_NODES = U_NODES.reshape((self.geometry.ngdl_per_node*len(nodes), 1))
+        # Get integrator name
+        return {
+            "info": {"solver-type": "int_name", "ld": lam},
+            "U": U_NODES.tolist(),
+        }
