@@ -297,3 +297,16 @@ class Geometry():
             else:
                 raise ValueError(f"Unknown element type: {elem_type}")
         return O
+
+    def to_json(self):
+        dicttypes = {"Shell": "T1V", "Bar": "L1V",
+                     "OriHinge": "OH", "Opening": "L1V"}
+        if not self.meshed:
+            raise ValueError(
+                "Geometry must be meshed before exporting to JSON.")
+        data = {}
+        data['nodes'] = self.nodes.tolist()
+        data['dictionary'] = self.dictionary
+        data['types'] = [dicttypes[t] for t in self.types]
+        data['properties'] = self.properties
+        return data

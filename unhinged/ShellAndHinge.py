@@ -111,6 +111,29 @@ class ShellAndHinge():
         for tie in self.geometry.tie_nodes:
             ops.equalDOF(tie[0], tie[1], *tie_type)
 
+    def setup_model(self):
+        ops.system('BandGeneral')
+        ops.numberer('RCM')
+        ops.constraints('Plain')
+        # TODO tenemos que revisar si hay alguno mejor para nuestro caso
+        ops.test('NormDispIncr', 1.0e-3, 500)
+
+    def analyze(self, n_steps, callback=None):
+        solutions = []
+        try:
+            for i in range(n_steps):
+                if i != 0:
+                    if ops.analyze(1) != 0:
+                        print(f"Analysis failed at step {i}")
+                        break
+                if callback is not None:
+                    callback(i)
+                solutions.append(self.get_disp_vector())
+        except KeyboardInterrupt as e:
+            print(f"Analysis stopped at step {i} with error: {e}")
+        self.solutions = solutions
+        return solutions
+
     def visualize(self, ax=None, undeformed=False, node_labels=False, plot_hinges=True):
         if ax is None:
             fig = plt.figure(figsize=[12, 5])
@@ -135,6 +158,19 @@ class ShellAndHinge():
                 coords = np.vstack((coords, coords[0, :]))
                 ax.plot_trisurf(coords[:, 0], coords[:, 1], coords[:, 2],
                                 color=color, alpha=alpha)
+
+        for bar in self.geometry.bars:
+            n1, n2 = bar.discretized_nodes
+            c1 = np.array(ops.nodeCoord(n1))
+            c2 = np.array(ops.nodeCoord(n2))
+            color = 'blue'
+            alpha = 1
+            disp1 = ops.nodeDisp(n1)
+            disp2 = ops.nodeDisp(n2)
+            c1 += np.array(disp1)[:3]*(1-undeformed)
+            c2 += np.array(disp2)[:3]*(1-undeformed)
+            ax.plot([c1[0], c2[0]], [c1[1], c2[1]], [c1[2], c2[2]],
+                    color=color, alpha=alpha)
         for i in ops.getNodeTags():
             coor = ops.nodeCoord(i) + np.array(ops.nodeDisp(i))[:3]
             color = 'yellow'
@@ -181,3 +217,18 @@ class ShellAndHinge():
             "info": {"solver-type": "int_name", "ld": lam},
             "U": U_NODES.tolist(),
         }
+
+    def export_json(self, filename):
+        data = self.geometry.to_json()
+        data["materials_panels"] = self.materials_panels
+        data["materials_bars"] = self.materials_bars
+        data["materials_hinges"] = self.materials_hinges
+        data["regions"] = []
+        data["ebc"] = []
+        data["nbc"] = []
+        data["nvn"] = 6
+        if hasattr(self, "solutions"):
+            data["solutions"] = self.solutions
+        import json
+        with open(filename, 'w') as f:
+            json.dump(data, f, indent=2)
