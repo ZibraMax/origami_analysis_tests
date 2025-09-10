@@ -67,7 +67,7 @@ for mode in range(Nmodes):
     sol["info"] = {"solver-type": "EIGEN", "ld": lam[mode]}
     model.solutions.append(sol)
 
-model.export_json("eigv_kresling.json")
+# model.export_json("eigv_kresling.json")
 
 fig = plt.figure()
 ax = fig.add_subplot(1, 1, 1, projection='3d')

@@ -244,9 +244,15 @@ class ShellAndHinge():
 
     def export_json(self, filename):
         data = self.geometry.to_json()
-        data["materials_panels"] = self.materials_panels
-        data["materials_bars"] = self.materials_bars
-        data["materials_hinges"] = self.materials_hinges
+
+        materials_panels = []
+        for i, mat in enumerate(self.materials_panels):
+            materials_panels.extend(
+                [mat]*len(self.geometry.panels[i].discretized_elements))
+
+        data["properties"]["materials_panels"] = materials_panels
+        data["properties"]["materials_bars"] = self.materials_bars
+        data["properties"]["materials_hinges"] = self.materials_hinges
         data["regions"] = []
         data["ebc"] = []
         data["nbc"] = []
