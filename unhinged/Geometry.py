@@ -145,9 +145,9 @@ class Geometry():
         if plane not in ['x', 'y', 'z']:
             raise ValueError("Plane must be 'x', 'y', or 'z'.")
         axis = {'x': 0, 'y': 1, 'z': 2}[plane]
-        for i, node in enumerate(self.base_nodes):
+        for i, node in enumerate(self.nodes):
             if abs(node[axis]-coord) < tol:
-                self.ebc.append([self.node_map[i][0], *values])
+                self.ebc.append([i, *values])
 
     def add_load_plane(self, plane='z', coord=0.0, values=None, tol=1e-8):
         if not self.meshed:
@@ -160,7 +160,8 @@ class Geometry():
             if abs(node[axis]-coord) < tol:
                 self.nbc.append([self.node_map[i][0], *values])
 
-    def get_nodes_plane(self, plane='z', coord=0.0, tol=1e-8):
+    def get_nodes_plane(self, plane='z', coord=0.0, tol=1e-8, basenodes=False):
+        lookupnodes = self.base_nodes if basenodes else self.nodes
         if not self.meshed:
             raise ValueError(
                 "Geometry must be meshed before adding boundary conditions.")
@@ -168,7 +169,7 @@ class Geometry():
             raise ValueError("Plane must be 'x', 'y', or 'z'.")
         axis = {'x': 0, 'y': 1, 'z': 2}[plane]
         nodes = []
-        for i, node in enumerate(self.base_nodes):
+        for i, node in enumerate(lookupnodes):
             if abs(node[axis]-coord) < tol:
                 nodes.append(i)
         return nodes

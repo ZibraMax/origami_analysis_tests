@@ -3,47 +3,76 @@ import opensees as ops
 import matplotlib.pyplot as plt
 
 
-H = 100
+H = 70
 n = 6
 b = 68
 
-data = Kresling(b=b, H0=H/2, H1=H, n=n).generate(get_int_lines=False)
+data = Kresling(b=b, H0=0.0, H1=H, n=n).generate(get_int_lines=False,
+                                                 get_ext_lines=True,
+                                                 get_base_bars=True,
+                                                 get_ext_hinges=False,
+                                                 get_int_hinges=False,
+                                                 get_panels=True)
 
-O = Geometry.from_json(data, t=0.2)
+O = Geometry.from_json(data, t=0.4)
 O.mesh(n=4)
 
 O.add_bc_plane('z', 0.0, values=[1, 1, 1, 0, 0, 0])
 
-nodes_tie = O.get_nodes_plane('z', H, tol=1e-3)
+nodes_tie = O.get_nodes_plane('z', H, tol=1e-3, basenodes=True)
 print("Nodes at the top plane:", nodes_tie)
 
 O.add_load_plane('z', H, values=[0, 0, -1/len(nodes_tie), 0, 0, 0])
 
 model = ShellAndHinge(O)
-model.add_material_shells(mat_tag=1, E=100, v=0.3)
-model.add_material_bars(mat_tag=2, E=1e9, A=1.0)
+model.add_material_shells(mat_tag=1, E=100, v=0.0)
+model.add_material_bars(mat_tag=2, E=100, A=1.0)
 model.add_material_hinges(k=0.00)
 model.create_model()
 
 # Extra manual ties
 nodes_tie = O.get_nodes_plane('z', H, tol=1e-3)
 for n in nodes_tie[1:]:
-    ops.equalDOF(O.node_map[nodes_tie[0]][0], O.node_map[n][0], 3)
+    ops.equalDOF(nodes_tie[0], n, 3)
 
-
-fig = plt.figure()
-ax = fig.add_subplot(1, 1, 1, projection='3d')
-model.visualize(ax=ax, undeformed=True, node_labels=True)
-plt.show()
 
 model.setup_model()
 
 # Setup solver
 M = 500
 # ops.integrator('DisplacementControl', nodes_tie[0], 3, -H/M)
-ops.integrator('MGDCM', 0.1, 6, 3, 1)
+ops.integrator('MGDCM', 0.2, 15, 4, 0)
 ops.algorithm('Newton')
 ops.analysis('Static')
+
+Nmodes = 12
+lam = ops.eigen('standard', 'symmBandLapack', Nmodes)
+eigenvectors = []
+for node in ops.getNodeTags():
+    eigenvectors.append([])
+    for mode in range(Nmodes):
+        ev = ops.nodeEigenvector(node, mode+1)
+        eigenvectors[-1].append(ev)
+
+print("First eigenvalues:", lam)
+model.solutions = []
+factors = [-1 for i in lam]
+for mode in range(Nmodes):
+    for node in ops.getNodeTags():
+        nodedisp = ops.nodeDisp(node)
+        for i, d in enumerate(nodedisp):
+            ops.setNodeDisp(
+                node, i+1, factors[mode]*eigenvectors[node][mode][i], '-commit')
+    sol = model.get_disp_vector()
+    sol["info"] = {"solver-type": "EIGEN", "ld": lam[mode]}
+    model.solutions.append(sol)
+
+model.export_json("eigv_kresling.json")
+
+fig = plt.figure()
+ax = fig.add_subplot(1, 1, 1, projection='3d')
+model.visualize(ax=ax, undeformed=False, node_labels=False)
+plt.show()
 
 
 res = {"step": [], "load_factor": [], "disp": []}

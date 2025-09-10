@@ -170,11 +170,35 @@ class ShellAndHinge():
             c1 += np.array(disp1)[:3]*(1-undeformed)
             c2 += np.array(disp2)[:3]*(1-undeformed)
             ax.plot([c1[0], c2[0]], [c1[1], c2[1]], [c1[2], c2[2]],
-                    color=color, alpha=alpha)
+                    color=color, alpha=alpha, lw=3)
+
+        if plot_hinges:
+            for hinge in self.geometry.hinges:
+                n1, n2, n3, n4 = hinge.discretized_nodes
+                c1 = np.array(ops.nodeCoord(n1)) + \
+                    np.array(ops.nodeDisp(n1))[:3]*(1-undeformed)
+                c2 = np.array(ops.nodeCoord(n2)) + \
+                    np.array(ops.nodeDisp(n2))[:3]*(1-undeformed)
+                c3 = np.array(ops.nodeCoord(n3)) + \
+                    np.array(ops.nodeDisp(n3))[:3]*(1-undeformed)
+                c4 = np.array(ops.nodeCoord(n4)) + \
+                    np.array(ops.nodeDisp(n4))[:3]*(1-undeformed)
+                color = 'red'
+                alpha = 1
+                # plot dash line between n1 and n2
+                ax.plot([c1[0], c2[0]], [c1[1], c2[1]], [c1[2], c2[2]],
+                        color=color, alpha=alpha, linestyle='dashed', lw=3)
+                # plot solid line between n2 and n3
+                ax.plot([c2[0], c3[0]], [c2[1], c3[1]], [c2[2], c3[2]],
+                        color=color, alpha=alpha, lw=3)
+                # plot dash line between n3 and n4
+                ax.plot([c3[0], c4[0]], [c3[1], c4[1]], [c3[2], c4[2]],
+                        color=color, alpha=alpha, linestyle='dashed', lw=3)
+
         for i in ops.getNodeTags():
             coor = ops.nodeCoord(i) + np.array(ops.nodeDisp(i))[:3]
             color = 'yellow'
-            size = 0
+            size = 2
             ax.scatter(coor[0], coor[1], coor[2], color=color, s=size)
             if node_labels:
                 ax.text(coor[0], coor[1], coor[2],
