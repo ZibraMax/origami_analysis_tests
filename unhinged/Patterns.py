@@ -45,7 +45,7 @@ class Kresling():
         y_rotated = x * sin_angle + y * cos_angle
         return [float(x_rotated), float(y_rotated), float(z)]
 
-    def generate(self, get_panels=True, get_int_hinges=True, get_ext_hinges=True, get_base_bars=True, get_int_lines=True, get_ext_lines=True):
+    def generate(self, get_panels=True, get_int_hinges=True, get_ext_hinges=True, get_base_bars=True, get_int_lines=True, get_ext_lines=True, get_base_panels=True):
         design = self.props
         phi0 = design["phi0"]
         phi1 = design["phi1"]
@@ -126,6 +126,20 @@ class Kresling():
 
         triangles.append([n-1, 0, n])
         triangles.append([n-1, n, m-1])
+
+        if get_base_panels:
+
+            nodes.append([0.0, 0.0, 0.0])
+            m = len(nodes)
+            for i in range(n-1):
+                triangles.append([m-1, i, i+1])
+            triangles.append([m-1, n-1, 0])
+
+            nodes.append([0.0, 0.0, H1])
+            m = len(nodes)
+            for i in range(n-1):
+                triangles.append([m-1, n+i, n+i+1])
+            triangles.append([m-1, 2*n-1, n])
 
         # kresling["dictionary"] = triangles + ext_lines + \
         #     int_lines + int_hinges + ext_hinges + base_lines

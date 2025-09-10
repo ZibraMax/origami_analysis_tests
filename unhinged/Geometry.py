@@ -301,7 +301,7 @@ class Geometry():
         return O
 
     def to_json(self):
-        dicttypes = {"Shell": "T1V", "Bar": "OH",
+        dicttypes = {"Shell": "T1V", "Bar": "L1V",
                      "OriHinge": "OH", "Opening": "OH"}
         if not self.meshed:
             raise ValueError(
