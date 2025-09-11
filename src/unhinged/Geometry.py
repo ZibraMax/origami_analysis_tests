@@ -78,7 +78,7 @@ class Geometry():
 
     def get_index_duplicates(self, tol=1e-10):
         if len(self.nodes) == 0:
-            return []
+            return {}
         duplicates = {}
         for i, v in enumerate(self.nodes):
             indices = self.test_points_vertices(v, tol=tol)
@@ -97,6 +97,10 @@ class Geometry():
         gdl = np.arange(n, n+self.ngdl_per_node)
         self.base_nodes = np.vstack([self.base_nodes, coord])
         self.base_gdls = np.vstack([self.base_gdls, gdl])
+
+    def add_nodes(self, coords):
+        for coord in coords:
+            self.add_node(coord)
 
     def add_panel(self, panel: Panel):
         panel.set_domanin(self)
