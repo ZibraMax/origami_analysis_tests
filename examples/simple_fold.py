@@ -21,6 +21,11 @@ geo.add_nodes(nodes)
 panel1 = uh.TriangularPanel([0, 2, 1], thickness=t)
 panel2 = uh.TriangularPanel([0, 1, 3], thickness=t)
 hinge = uh.Hinge([3, 0, 1, 2])
+
+geo.add_panel(panel1)
+geo.add_panel(panel2)
+geo.add_hinge(hinge)
+
 geo.mesh(N)
 geo.add_bc_plane('z', 0.0, [1, 1, 1, 0, 0, 0])
 geo.add_nbc(3, [1, 0, 0, 0, 0, 0])
