@@ -1,4 +1,22 @@
+# Specify filepatterns you want git to ignore.
+
 __pycache__/
+.venv/
+ipynb_checkpoints/
+References/
+Matrices/
+dist/
+build/
+temp/
+interface/js/
+F_BUILD/
+unhinged.egg-info/
 *.pyc
-*.pyd
-*.egg
+secrets.txt
+# sendEmail.py
+*.cpython-37.pyc
+*.csv
+*.log
+*.svg
+*.txt
+*.sublime*
