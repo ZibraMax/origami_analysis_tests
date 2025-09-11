@@ -134,12 +134,14 @@ class Kresling():
             for i in range(n-1):
                 triangles.append([m-1, i, i+1])
             triangles.append([m-1, n-1, 0])
+            # Create extra hinges for panels
 
             nodes.append([0.0, 0.0, H1])
             m = len(nodes)
             for i in range(n-1):
                 triangles.append([m-1, n+i, n+i+1])
             triangles.append([m-1, 2*n-1, n])
+            # Create extra hinges for panels
 
         # kresling["dictionary"] = triangles + ext_lines + \
         #     int_lines + int_hinges + ext_hinges + base_lines

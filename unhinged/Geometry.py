@@ -179,7 +179,7 @@ class Geometry():
             dofs = list(range(self.ngdl_per_node))
         self.tie_nodes.append((node1, node2))
 
-    def mesh(self, n=1):
+    def mesh(self, n=1, mesh_hinges=True):
         if self.meshed:
             return
 
