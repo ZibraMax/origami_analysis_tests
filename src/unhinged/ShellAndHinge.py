@@ -89,13 +89,12 @@ class ShellAndHinge():
         for i, hinge in enumerate(self.geometry.hinges):
             if self.materials_hinges[i] == -1:
                 raise ValueError(f"No material assigned to hinge {i}.")
+            hinge.eletags = []
             for minihinge in hinge.discretized_elements:
                 nel = len(ops.getEleTags())
                 ops.element('OriHinge', nel, *minihinge,
                             self.materials_hinges[i], hinge.theta1, hinge.theta2)
-            hinge.eletag = nel
-            ops.element('OriHinge', nel, *hinge.discretized_nodes,
-                        self.materials_hinges[i], hinge.theta1, hinge.theta2)
+                hinge.eletags.append(nel)
         for i, bar in enumerate(self.geometry.bars):
             nel = len(ops.getEleTags())
             bar.eletag = nel
