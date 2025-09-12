@@ -68,7 +68,7 @@ def D(radians): return radians * 180.0 / np.pi
 THETA_1 = R(10)
 THETA_2 = R(350)
 
-data = json.load(open('./shell_and_hinge/simple_fold/fold.json'))
+data = json.load(open('./old_examples/shell_and_hinge/simple_fold/fold.json'))
 
 nodes = data['nodes']
 dictionary = data['dictionary']

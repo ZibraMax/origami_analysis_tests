@@ -8,7 +8,7 @@ n = 6
 b = 68
 
 data = Kresling(b=b, H0=0.0, H1=H, n=n).generate(get_int_lines=False,
-                                                 get_ext_lines=False,
+                                                 get_ext_lines=True,
                                                  get_base_bars=False,
                                                  get_ext_hinges=False,
                                                  get_int_hinges=False,

@@ -79,19 +79,23 @@ class ShellAndHinge():
                 raise ValueError(f"No material assigned to panel {i}.")
 
             panel_type = panel.opensees_type
+            panel.eletags = []
             for shell in panel.discretized_elements:
                 nel = len(ops.getEleTags())
+                panel.eletags.append(nel)
                 ops.element(panel_type, nel, *shell,
-                            self.materials_panels[i], '-corotational')
+                            self.materials_panels[i], '-corotational', '-reducedIntegration', '-drillingNL')
 
         for i, hinge in enumerate(self.geometry.hinges):
             nel = len(ops.getEleTags())
             if self.materials_hinges[i] == -1:
                 raise ValueError(f"No material assigned to hinge {i}.")
+            hinge.eletag = nel
             ops.element('OriHinge', nel, *hinge.discretized_nodes,
                         self.materials_hinges[i], hinge.theta1, hinge.theta2)
         for i, bar in enumerate(self.geometry.bars):
             nel = len(ops.getEleTags())
+            bar.eletag = nel
             if self.materials_bars[i] == -1:
                 raise ValueError(f"No material assigned to bar {i}.")
             ops.element('CorotTruss', nel, *bar.discretized_nodes, 1,
@@ -111,12 +115,11 @@ class ShellAndHinge():
         for tie in self.geometry.tie_nodes:
             ops.equalDOF(tie[0], tie[1], *tie_type)
 
-    def setup_model(self):
+    def setup_model(self, tol=1e-5):
         ops.system('BandGeneral')
         ops.numberer('RCM')
         ops.constraints('Plain')
-        # TODO tenemos que revisar si hay alguno mejor para nuestro caso
-        ops.test('NormDispIncr', 1.0e-3, 500)
+        ops.test('NormDispIncr', tol, 500)
 
     def analyze(self, n_steps, callback=None):
         solutions = []

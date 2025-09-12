@@ -1,4 +1,5 @@
 import numpy as np
+import opensees as ops
 from typing import Tuple
 def R(degrees): return degrees * np.pi / 180.0
 def D(radians): return radians * 180.0 / np.pi
@@ -10,6 +11,7 @@ class Element():
         self.coords = []
         self.gdl = []
         self.discretized_nodes = []
+        self.eletag = None
 
     def set_domanin(self, domain):
         self.coords = domain.base_nodes[self.nodes]
@@ -30,6 +32,9 @@ class Hinge(Element):
         super().__init__(nodes)
         self.theta1 = theta1
         self.theta2 = theta2
+
+    def get_theta(self):
+        return ops.elementResponse(self.eletag, 'theta')
 
 
 class Panel(Element):
