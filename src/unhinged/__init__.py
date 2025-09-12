@@ -1,5 +1,5 @@
 from .Elements import TriangularPanel, RectangularPanel, Bar, Hinge, R, D
-from .Geometry import Geometry
+from .Geometry import Geometry, Opening
 from .Patterns import Kresling
 from .ShellAndHinge import ShellAndHinge
 __author__ = "Arturo Rodriguez - da.rodriguezh@rice.edu"
