@@ -195,6 +195,11 @@ class Geometry():
         properties["th"] = []
 
         for panel in self.panels:
+            for hinge in self.hinges:
+                i1, i2, i3, i4 = hinge.nodes
+                if i2 in panel.nodes and i3 in panel.nodes:
+                    hinge.panels.append(panel)
+
             res = panel.mesh(n=n)
             sub_nodes = panel.discretized_nodes
             sub_elements = panel.discretized_elements
@@ -214,21 +219,15 @@ class Geometry():
         self.nodes = np.array(self.nodes)
 
         for i, hinge in enumerate(self.hinges):
-            n1, n2, n3, n4 = hinge.nodes
-            v1 = self.base_nodes[n1]
-            v2 = self.base_nodes[n2]
-            v3 = self.base_nodes[n3]
-            v4 = self.base_nodes[n4]
-            idxn1 = self.test_point_vertices(v1)[1]
-            idxn2 = self.test_point_vertices(v2)[1]
-            idxn3 = self.test_point_vertices(v3)[1]
-            idxn4 = self.test_point_vertices(v4)[1]
-            if None in [idxn1, idxn2, idxn3, idxn4]:
-                raise ValueError(
-                    f"Hinge nodes not found in new nodes list: {n1},{n2},{n3},{n4}")
-            elements.append([idxn1, idxn2, idxn3, idxn4])
-            hinge.discretized_nodes = [idxn1, idxn2, idxn3, idxn4]
-            types.append("OriHinge")
+            hinge.mesh(n)
+            for subelement in hinge.discretized_elements:
+                idxn1, idxn2, idxn3, idxn4 = subelement
+                if None in [idxn1, idxn2, idxn3, idxn4]:
+                    raise ValueError(
+                        f"Hinge nodes not found in new nodes list: {hinge.nodes}")
+                elements.append([idxn1, idxn2, idxn3, idxn4])
+                # hinge.discretized_nodes = [idxn1, idxn2, idxn3, idxn4]
+                types.append("OriHinge")
 
         for bar in self.bars:
             n1, n2 = bar.nodes
