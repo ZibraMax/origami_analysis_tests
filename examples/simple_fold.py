@@ -9,10 +9,10 @@ nodes = [
     [0.8660254037844386, 0.0, 0.0],
     [-0.7499999999999998, 0.0, -0.4330127018922196]
 ]
-kf = 0.03
+kf = 0.3
 E = 200
 v = 0.3
-t = 0.05
+t = 0.5
 N = 3
 
 geo = uh.Geometry(6)
@@ -29,7 +29,7 @@ geo.add_hinge(hinge)
 geo.mesh(N)
 geo.add_bc_plane('z', 0.0, [1, 1, 1, 0, 0, 0])
 # geo.add_ebc(3, [1, 0, 0, 0, 0, 0])
-geo.add_nbc(3, [0, 0, 1, 0, 0, 0])
+geo.add_nbc(3, [1, 0, 0, 0, 0, 0])
 model = uh.ShellAndHinge(geo)
 model.add_material_hinges(kf)
 model.add_material_shells(1, E, v)
@@ -37,9 +37,9 @@ model.create_model()
 model.setup_model()
 
 
-# ops.integrator('MGDCM', 0.005, 15, 4, 0)
+ops.integrator('MGDCM', 0.005, 15, 4, 0)
 # ops.integrator('LoadControl', 0.01)
-ops.integrator('DisplacementControl', geo.node_map[3][0], 3, 0.005)
+# ops.integrator('DisplacementControl', geo.node_map[3][0], 3, 0.005)
 ops.algorithm('Newton')
 ops.analysis('Static')
 

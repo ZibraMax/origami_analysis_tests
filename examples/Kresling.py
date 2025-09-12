@@ -15,7 +15,7 @@ data = Kresling(b=b, H0=0.0, H1=H, n=n).generate(get_int_lines=False,
                                                  get_panels=True,
                                                  get_base_panels=True)
 
-O = Geometry.from_json(data, t=0.4)
+O = Geometry.from_json(data, t=0.2)
 O.mesh(n=4)
 
 O.add_bc_plane('z', 0.0, values=[1, 1, 1, 0, 0, 0])
@@ -30,7 +30,7 @@ model.add_material_shells(mat_tag=1, E=100, v=0.0)
 model.add_material_shells(mat_tag=2, E=400, v=0.0,
                           shell_list=list(range(2*n, 4*n)))
 # model.add_material_bars(mat_tag=3, E=100, A=1.0)
-model.add_material_hinges(k=0.00)
+model.add_material_hinges(k=0.3)
 model.create_model()
 
 # Extra manual ties
@@ -48,7 +48,7 @@ ops.integrator('MGDCM', 0.2, 15, 4, 0)
 ops.algorithm('Newton')
 ops.analysis('Static')
 
-Nmodes = 4
+Nmodes = 12
 lam = ops.eigen('standard', 'symmBandLapack', Nmodes)
 eigenvectors = []
 for node in ops.getNodeTags():

@@ -45,7 +45,7 @@ class Kresling():
         y_rotated = x * sin_angle + y * cos_angle
         return [float(x_rotated), float(y_rotated), float(z)]
 
-    def generate(self, get_panels=True, get_int_hinges=True, get_ext_hinges=True, get_base_bars=True, get_int_lines=True, get_ext_lines=True, get_base_panels=True):
+    def generate(self, get_panels=True, get_int_hinges=True, get_ext_hinges=True, get_base_bars=True, get_int_lines=True, get_ext_lines=True, get_base_panels=True, get_base_hinges=True):
         design = self.props
         phi0 = design["phi0"]
         phi1 = design["phi1"]
@@ -63,6 +63,7 @@ class Kresling():
         kresling["exterior_lines"] = []
         kresling["interior_hinges"] = []
         kresling["exterior_hinges"] = []
+        kresling["panel_hinges"] = []
 
         nodes = kresling["nodes"]
         triangles = kresling["triangles"]
@@ -71,6 +72,7 @@ class Kresling():
         int_hinges = kresling["interior_hinges"]
         ext_hinges = kresling["exterior_hinges"]
         base_lines = kresling["base_lines"]
+        panel_hinges = kresling["panel_hinges"]
 
         # Create base and top polygons in 3D coordinates
         for i in range(n):
@@ -135,12 +137,17 @@ class Kresling():
                 triangles.append([m-1, i, i+1])
             triangles.append([m-1, n-1, 0])
             # Create extra hinges for panels
+            for i in range(n):
+                panel_hinges.append([m-1, i, (i+1) % n, (i+n+1) % (2*n)])
 
             nodes.append([0.0, 0.0, H1])
             m = len(nodes)
             for i in range(n-1):
                 triangles.append([m-1, n+i, n+i+1])
             triangles.append([m-1, 2*n-1, n])
+
+            for i in range(n):
+                panel_hinges.append([m-1, (i+n) % (2*n), (i+n+1) % (2*n), i])
             # Create extra hinges for panels
 
         # kresling["dictionary"] = triangles + ext_lines + \
