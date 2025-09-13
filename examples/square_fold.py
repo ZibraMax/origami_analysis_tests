@@ -13,47 +13,41 @@ nodes = [
     [-0.7499999999999998, -0.5, -0.4330127018922196],
     [-0.7499999999999998, 0.5, -0.4330127018922196]
 ]
-kf = 0.3
+kf = 0.5
 E = 200
 v = 0.3
 t = 0.5
-N = 3
+N = 10
 
 geo = uh.Geometry(6)
 geo.add_nodes(nodes)
 
 
-panel1 = uh.TriangularPanel([5, 4, 1], thickness=t)
-panel2 = uh.TriangularPanel([4, 0, 1], thickness=t)
-panel3 = uh.TriangularPanel([0, 2, 3], thickness=t)
-panel4 = uh.TriangularPanel([0, 3, 1], thickness=t)
+panel1 = uh.RectangularPanel([0, 2, 3, 1], thickness=t)
+panel2 = uh.RectangularPanel([4, 0, 1, 5], thickness=t)
 
 hinge = uh.Hinge([4, 1, 0, 3])
 
-opening = uh.Opening([4, 1])
 
 geo.add_panel(panel1)
 geo.add_panel(panel2)
-geo.add_panel(panel3)
-geo.add_panel(panel4)
 geo.add_hinge(hinge)
-geo.add_bar(opening)
 
 geo.mesh(N)
 geo.add_bc_plane('z', 0.0, [1, 1, 1, 0, 0, 0])
 # geo.add_ebc(3, [1, 0, 0, 0, 0, 0])
-geo.add_nbc(5, [0, 0, 1, 0, 0, 0])
+geo.add_nbc(5, [1, 0, 0, 0, 0, 0])
 model = uh.ShellAndHinge(geo)
 model.add_material_hinges(kf)
 model.add_material_bars(2, 0.0, 1.0)
 model.add_material_shells(1, E, v)
 model.create_model()
-model.setup_model()
+model.setup_model(tol=1e-2)
 
 
 # ops.integrator('MGDCM', 0.005, 15, 4, 0)
 # ops.integrator('LoadControl', 0.01)
-ops.integrator('DisplacementControl', geo.node_map[5][0], 3, 0.005)
+ops.integrator('DisplacementControl', geo.node_map[5][0], 1, 0.01)
 ops.algorithm('Newton')
 ops.analysis('Static')
 
@@ -69,7 +63,7 @@ M = 1000
 
 def callback(i):
     lam = ops.getLoadFactor(1)
-    disp_z = ops.nodeDisp(model.geometry.node_map[3][0], 3)
+    disp_z = ops.nodeDisp(model.geometry.node_map[5][0], 1)
     print(f"{i},{lam},{disp_z}")
     res['step'].append(i)
     res['load_factor'].append(lam)

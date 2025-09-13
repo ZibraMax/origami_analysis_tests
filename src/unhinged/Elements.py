@@ -118,29 +118,36 @@ class Panel(Element):
 class RectangularPanel(Panel):
     def __init__(self, nodes, thickness=0.35):
         super().__init__(nodes, thickness)
-        self.opensees_type = 'ASDShellQ4'
+        self.opensees_type = 'ASDShellT3'
 
     def mesh(self, n) -> Tuple[np.ndarray, list]:
-        v1, v2, v3, v4 = np.array(self.coords)
+        v1, v2, v3, v4 = np.array(self.coords)  # corners of the rectangle
         nodes = []
         node_index = {}
 
+        # Create the grid nodes
         for i in range(n+1):
             for j in range(n+1):
-                point = (i/n)*v1 + (j/n)*v2 + ((n-i)/n)*v4 + ((n-j)/n)*v3
+                # Bilinear interpolation
+                s, t = i/n, j/n
+                point = (1-s)*(1-t)*v1 + s*(1-t)*v2 + s*t*v3 + (1-s)*t*v4
                 idx = len(nodes)
                 nodes.append(point)
                 node_index[(i, j)] = idx
 
         elements = []
+        # Create two triangles per cell
         for i in range(n):
             for j in range(n):
-                a = (i, j)
-                b = (i+1, j)
-                c = (i+1, j+1)
-                d = (i, j+1)
-                elements.append(
-                    [node_index[a], node_index[b], node_index[c], node_index[d]])
+                a = node_index[(i, j)]
+                b = node_index[(i+1, j)]
+                c = node_index[(i, j+1)]
+                d = node_index[(i+1, j+1)]
+
+                # split into two triangles: (a,b,d) and (a,d,c)
+                elements.append([a, b, d])
+                elements.append([a, d, c])
+
         new_nodes = np.array(nodes)
         new_elements = elements
         self.discretized_nodes = new_nodes
