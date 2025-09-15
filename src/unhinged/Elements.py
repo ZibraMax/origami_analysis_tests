@@ -118,7 +118,7 @@ class Panel(Element):
 class RectangularPanel(Panel):
     def __init__(self, nodes, thickness=0.35):
         super().__init__(nodes, thickness)
-        self.opensees_type = 'ASDShellT3'
+        self.opensees_type = 'ASDShellQ4'
 
     def mesh(self, n) -> Tuple[np.ndarray, list]:
         v1, v2, v3, v4 = np.array(self.coords)  # corners of the rectangle
@@ -145,8 +145,7 @@ class RectangularPanel(Panel):
                 d = node_index[(i+1, j+1)]
 
                 # split into two triangles: (a,b,d) and (a,d,c)
-                elements.append([a, b, d])
-                elements.append([a, d, c])
+                elements.append([a, b, d, c])
 
         new_nodes = np.array(nodes)
         new_elements = elements
