@@ -29,6 +29,7 @@ class Kresling():
 
         phi1 = 2*np.arctan(x1)
         phi0 = 2*np.arctan(x2)
+        self.delta_theta = phi1 - phi0
 
         self.props = {
             "phi0": phi0,
@@ -64,7 +65,7 @@ class Kresling():
         kresling["interior_hinges"] = []
         kresling["exterior_hinges"] = []
         kresling["panel_hinges"] = []
-        kresling["solid_connections"] = []
+        kresling["base_panels"] = []
 
         nodes = kresling["nodes"]
         triangles = kresling["triangles"]
@@ -74,7 +75,7 @@ class Kresling():
         ext_hinges = kresling["exterior_hinges"]
         base_lines = kresling["base_lines"]
         panel_hinges = kresling["panel_hinges"]
-        solid_connections = kresling["solid_connections"]
+        base_panels = kresling["base_panels"]
 
         # Create base and top polygons in 3D coordinates
         for i in range(n):
@@ -131,28 +132,13 @@ class Kresling():
         triangles.append([n-1, 0, n])
         triangles.append([n-1, n, m-1])
 
-        if get_base_panels:
+        # m = len(nodes)+1
+        # for i in range(n):
+        #     panel_hinges.append([m-1, i, (i+1) % n, (i+n+1) % (2*n)])
 
-            nodes.append([0.0, 0.0, 0.0])
-            m = len(nodes)
-            for i in range(n-1):
-                triangles.append([m-1, i, i+1])
-                solid_connections.append([m-1, i])
-            triangles.append([m-1, n-1, 0])
-            solid_connections.append([m-1, n-1])
-            for i in range(n):
-                panel_hinges.append([m-1, i, (i+1) % n, (i+n+1) % (2*n)])
-
-            nodes.append([0.0, 0.0, H1])
-            m = len(nodes)
-            for i in range(n-1):
-                triangles.append([m-1, n+i, n+i+1])
-                solid_connections.append([m-1, n+i])
-            triangles.append([m-1, 2*n-1, n])
-            solid_connections.append([m-1, 2*n-1])
-
-            for i in range(n):
-                panel_hinges.append([m-1, (i+n) % (2*n), (i+n+1) % (2*n), i])
+        # m = len(nodes)+2
+        # for i in range(n):
+        #     panel_hinges.append([m-1, (i+n) % (2*n), (i+n+1) % (2*n), i])
 
         # kresling["dictionary"] = triangles + ext_lines + \
         #     int_lines + int_hinges + ext_hinges + base_lines
@@ -184,6 +170,16 @@ class Kresling():
         if get_base_bars:
             kresling["dictionary"] += base_lines
             kresling["types"] += ["Bar"]*len(base_lines)
+
+        if get_base_panels:
+
+            base1 = [i for i in range(n)]
+            base2 = [i for i in range(n, 2*n)]
+            base_panels.append(base1)
+            base_panels.append(base2)
+
+            kresling["dictionary"] += base_panels
+            kresling["types"] += ["Poly"]*len(base_panels)
 
         kresling["properties"] = {"problem": "ShellAndHinge", }
 

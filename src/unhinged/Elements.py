@@ -9,13 +9,11 @@ class Element():
     def __init__(self, nodes):
         self.nodes = nodes
         self.coords = []
-        self.gdl = []
         self.discretized_nodes = []
         self.eletag = None
 
     def set_domanin(self, domain):
         self.coords = domain.base_nodes[self.nodes]
-        self.gdl = domain.base_gdls[self.nodes]
 
     def test_point_vertices(self, vertex, nodes, tol=1e-10):
         if len(nodes) == 0:
