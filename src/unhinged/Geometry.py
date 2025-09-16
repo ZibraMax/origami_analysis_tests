@@ -34,6 +34,53 @@ class Opening(Bar):
         return np.linalg.norm(cross) < tol
 
 
+class PolygonalPanel(Panel):
+    def __init__(self, nodes, thickness=0.2):
+        super().__init__(nodes, thickness=thickness)
+        self.opensees_type = "ASDShellT3"
+
+    def set_domanin(self, domain):
+        super().set_domanin(domain)
+
+    def mesh(self, n=1):
+        if n != 1:
+            # get centerpoint of polygon
+            center = np.mean(self.coords, axis=0)
+            nodes = []
+            elements = []
+            for i in range(len(self.nodes)):
+                n0 = center
+                n1 = self.coords[i]
+                n2 = self.coords[(i+1) % len(self.nodes)]
+                tri_panel = TriangularPanel(
+                    [0, 1, 2], thickness=self.thickness)
+                tri_panel.coords = np.array([n0, n1, n2])
+                nnodes, nelements = tri_panel.mesh(n=n)
+                nodes += nnodes.tolist()
+                elements += [[idx + len(nodes) - len(nnodes) for idx in elem]
+                             for elem in nelements]
+            # Get rid of duplicate nodes and reindex elements
+            unique_nodes = []
+            node_map = {}
+            for i, node in enumerate(nodes):
+                found, idx = self.test_point_vertices(
+                    node, np.array(unique_nodes))
+                if found:
+                    node_map[i] = idx
+                else:
+                    node_map[i] = len(unique_nodes)
+                    unique_nodes.append(node)
+            reindexed_elements = []
+            for elem in elements:
+                reindexed_elements.append([node_map[idx] for idx in elem])
+            self.discretized_nodes = np.array(unique_nodes)
+            self.discretized_elements = reindexed_elements
+        else:
+            self.discretized_nodes = self.coords
+            self.discretized_elements = [list(range(len(self.nodes)))]
+        return self.discretized_nodes, self.discretized_elements
+
+
 class Geometry():
     def __init__(self, ngdl_per_node=6):
         self.base_nodes = np.zeros((0, 3), dtype=float)
@@ -49,7 +96,6 @@ class Geometry():
         self.tie_nodes = []
 
         self.nodes = np.zeros((0, 3), dtype=float)
-        self.gdls = np.zeros((0, 6), dtype=int)
         self.node_map = {}
         self.dictionary = []
         self.types = []
@@ -258,7 +304,6 @@ class Geometry():
         self.types = types
         properties["problem"] = "ShellAndHinge"
         self.properties = properties
-        self.gdls = np.zeros((len(self.nodes), self.ngdl_per_node), dtype=int)
 
         self.node_map = {}
         for i, node in enumerate(self.base_nodes):
@@ -299,6 +344,10 @@ class Geometry():
             elif elem_type == 'Opening':
                 opening = Opening(elem_nodes)
                 O.add_opening(opening)
+            elif elem_type == 'Poly':
+                th = data["properties"].get("thickness", t)
+                panel = PolygonalPanel(elem_nodes, thickness=th)
+                O.add_panel(panel)
             else:
                 raise ValueError(f"Unknown element type: {elem_type}")
         return O
