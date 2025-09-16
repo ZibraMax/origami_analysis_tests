@@ -34,6 +34,11 @@ class Opening(Bar):
         return np.linalg.norm(cross) < tol
 
 
+class SolidTie(Opening):
+    def __init__(self, nodes):
+        super().__init__(nodes)
+
+
 class Geometry():
     def __init__(self, ngdl_per_node=6):
         self.base_nodes = np.zeros((0, 3), dtype=float)
@@ -43,6 +48,7 @@ class Geometry():
         self.bars: List[Bar] = []
         self.hinges: List[Hinge] = []
         self.openings: List[Opening] = []
+        self.solid_ties: List[SolidTie] = []
         self.meshed = False
         self.ebc = []
         self.nbc = []
@@ -118,6 +124,10 @@ class Geometry():
         opening.set_domanin(self)
         self.openings.append(opening)
 
+    def add_solid_tie(self, solid_tie: SolidTie):
+        solid_tie.set_domanin(self)
+        self.solid_ties.append(solid_tie)
+
     def add_ebc(self, node, values=None):
         if not self.meshed:
             raise ValueError(
@@ -190,6 +200,7 @@ class Geometry():
         self.nodes = []
         elements = []
         tie_nodes = []
+        super_tie_nodes = []
         types = []
         properties = {}
         properties["th"] = []
@@ -250,11 +261,18 @@ class Geometry():
                 if opening.is_interior(test_node):
                     flag = False
                     break
+            for solid_tie in self.solid_ties:
+                if solid_tie.is_interior(test_node):
+                    for idx in duplicate_indices[1:]:
+                        super_tie_nodes.append((duplicate_indices[0], idx))
+                    flag = False
+                    break
             if flag:
                 for idx in duplicate_indices[1:]:
                     tie_nodes.append((duplicate_indices[0], idx))
         self.dictionary = elements
         self.tie_nodes = tie_nodes
+        self.super_tie_nodes = super_tie_nodes
         self.types = types
         properties["problem"] = "ShellAndHinge"
         self.properties = properties
@@ -299,13 +317,17 @@ class Geometry():
             elif elem_type == 'Opening':
                 opening = Opening(elem_nodes)
                 O.add_opening(opening)
+
+            elif elem_type == 'SolidTie':
+                solid_tie = SolidTie(elem_nodes)
+                O.add_solid_tie(solid_tie)
             else:
                 raise ValueError(f"Unknown element type: {elem_type}")
         return O
 
     def to_json(self):
         dicttypes = {"Shell": "T1V", "Bar": "L1V",
-                     "OriHinge": "OH", "Opening": "OH"}
+                     "OriHinge": "OH", "Opening": "OH", "SolidTie": "OH"}
         if not self.meshed:
             raise ValueError(
                 "Geometry must be meshed before exporting to JSON.")

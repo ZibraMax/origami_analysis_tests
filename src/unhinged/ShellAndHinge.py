@@ -117,6 +117,9 @@ class ShellAndHinge():
         for tie in self.geometry.tie_nodes:
             ops.equalDOF(tie[0], tie[1], *tie_type)
 
+        for stie in self.geometry.super_tie_nodes:
+            ops.equalDOF(stie[0], stie[1], *[1, 2, 3, 4, 5, 6])
+
     def setup_model(self, tol=1e-5):
         ops.system('BandGeneral')
         ops.numberer('RCM')

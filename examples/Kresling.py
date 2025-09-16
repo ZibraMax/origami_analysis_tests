@@ -6,14 +6,16 @@ import matplotlib.pyplot as plt
 H = 70
 n = 6
 b = 68
+kresling = Kresling(b=b, H0=0.0, H1=H, n=n)
+data = kresling.generate(get_int_lines=False,
+                         get_ext_lines=True,
+                         get_base_bars=False,
+                         get_ext_hinges=False,
+                         get_int_hinges=False,
+                         get_panels=True,
+                         get_base_panels=True)
 
-data = Kresling(b=b, H0=0.0, H1=H, n=n).generate(get_int_lines=False,
-                                                 get_ext_lines=True,
-                                                 get_base_bars=False,
-                                                 get_ext_hinges=False,
-                                                 get_int_hinges=False,
-                                                 get_panels=True,
-                                                 get_base_panels=True)
+delta_angle = (kresling.props['phi1'] - kresling.props['phi0'])
 
 O = Geometry.from_json(data, t=0.2)
 O.mesh(n=4)
@@ -34,17 +36,25 @@ model.add_material_hinges(k=0.3)
 model.create_model()
 
 # Extra manual ties
-nodes_tie = O.get_nodes_plane('z', H, tol=1e-3)
-for n in nodes_tie[1:]:
-    ops.equalDOF(nodes_tie[0], n, 3)
+# nodes_tie = O.get_nodes_plane('z', H, tol=1e-3)
+# for n in nodes_tie[1:]:
+#     ops.equalDOF(nodes_tie[0], n, 3)
 
 
-model.setup_model()
+nodes_center_top = O.test_points_vertices([[0, 0, H]], tol=1e-3)
+
+for n in nodes_center_top[1:]:
+    ops.equalDOF(nodes_center_top[0], n, 4, 5, 6)
+
+
+model.setup_model(tol=1e-2)
 
 # Setup solver
-M = 500
-# ops.integrator('DisplacementControl', nodes_tie[0], 3, -H/M)
-ops.integrator('MGDCM', 0.2, 15, 4, 0)
+M = 200
+
+
+ops.integrator('DisplacementControl', nodes_center_top[0], 4, delta_angle/M)
+# ops.integrator('MGDCM', 0.2, 15, 4, 0)
 ops.algorithm('Newton')
 ops.analysis('Static')
 
