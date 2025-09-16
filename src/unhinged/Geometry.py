@@ -313,5 +313,10 @@ class Geometry():
         data['nodes'] = self.nodes.tolist()
         data['dictionary'] = self.dictionary
         data['types'] = [dicttypes[t] for t in self.types]
+        for i in range(len(data["dictionary"])):
+            if len(data["dictionary"][i]) == 3 and data["types"][i] == "T1V":
+                data["types"][i] = "T1V"
+            elif len(data["dictionary"][i]) == 4 and data["types"][i] == "T1V":
+                data["types"][i] = "C1V"
         data['properties'] = self.properties
         return data
