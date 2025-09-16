@@ -90,7 +90,6 @@ class Geometry():
         self.bars: List[Bar] = []
         self.hinges: List[Hinge] = []
         self.openings: List[Opening] = []
-        self.solid_ties: List[SolidTie] = []
         self.meshed = False
         self.ebc = []
         self.nbc = []
@@ -164,10 +163,6 @@ class Geometry():
     def add_opening(self, opening: Opening):
         opening.set_domanin(self)
         self.openings.append(opening)
-
-    def add_solid_tie(self, solid_tie: SolidTie):
-        solid_tie.set_domanin(self)
-        self.solid_ties.append(solid_tie)
 
     def add_ebc(self, node, values=None):
         if not self.meshed:
@@ -302,12 +297,6 @@ class Geometry():
                 if opening.is_interior(test_node):
                     flag = False
                     break
-            for solid_tie in self.solid_ties:
-                if solid_tie.is_interior(test_node):
-                    for idx in duplicate_indices[1:]:
-                        super_tie_nodes.append((duplicate_indices[0], idx))
-                    flag = False
-                    break
             if flag:
                 for idx in duplicate_indices[1:]:
                     tie_nodes.append((duplicate_indices[0], idx))
@@ -367,7 +356,7 @@ class Geometry():
 
     def to_json(self):
         dicttypes = {"Shell": "T1V", "Bar": "L1V",
-                     "OriHinge": "OH", "Opening": "OH", "SolidTie": "OH"}
+                     "OriHinge": "OH", "Opening": "OH"}
         if not self.meshed:
             raise ValueError(
                 "Geometry must be meshed before exporting to JSON.")
