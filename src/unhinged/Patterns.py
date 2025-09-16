@@ -153,6 +153,8 @@ class Kresling():
         if get_panels:
             kresling["dictionary"] += triangles
             kresling["types"] += ["Shell"]*len(triangles)
+            kresling["dictionary"] += solid_connections
+            kresling["types"] += ["SolidTie"]*len(solid_connections)
         if get_ext_lines:
             kresling["dictionary"] += ext_lines
             kresling["types"] += ["Opening"]*len(ext_lines)
