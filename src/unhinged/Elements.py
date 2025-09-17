@@ -101,7 +101,10 @@ class Hinge(Element):
             self.discretized_elements.append(new_hinge)
 
     def get_theta(self):
-        return ops.elementResponse(self.eletag, 'theta')
+        list_thetas = []
+        for eletag in self.eletags:
+            list_thetas.append(ops.eleResponse(eletag, 'theta')[0])
+        return list_thetas
 
 
 class Panel(Element):

@@ -75,9 +75,13 @@ class PolygonalPanel(Panel):
                 reindexed_elements.append([node_map[idx] for idx in elem])
             self.discretized_nodes = np.array(unique_nodes)
             self.discretized_elements = reindexed_elements
+            self._discretized_elements = [x[:]
+                                          for x in self.discretized_elements]
         else:
             self.discretized_nodes = self.coords
             self.discretized_elements = [list(range(len(self.nodes)))]
+            self._discretized_elements = [x[:]
+                                          for x in self.discretized_elements]
         return self.discretized_nodes, self.discretized_elements
 
 
@@ -355,7 +359,7 @@ class Geometry():
         return O
 
     def to_json(self):
-        dicttypes = {"Shell": "T1V", "Bar": "L1V",
+        dicttypes = {"Shell": "T1V", "Bar": "OH",
                      "OriHinge": "OH", "Opening": "OH"}
         if not self.meshed:
             raise ValueError(

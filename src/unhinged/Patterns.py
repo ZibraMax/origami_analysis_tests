@@ -153,8 +153,6 @@ class Kresling():
         if get_panels:
             kresling["dictionary"] += triangles
             kresling["types"] += ["Shell"]*len(triangles)
-            kresling["dictionary"] += solid_connections
-            kresling["types"] += ["SolidTie"]*len(solid_connections)
         if get_ext_lines:
             kresling["dictionary"] += ext_lines
             kresling["types"] += ["Opening"]*len(ext_lines)
@@ -180,6 +178,25 @@ class Kresling():
 
             kresling["dictionary"] += base_panels
             kresling["types"] += ["Poly"]*len(base_panels)
+
+        if get_base_hinges:
+            for i in range(n-1):
+                I = i
+                J = (i+n) % (2*n)
+                K = (i + n + 1) % (2*n)
+                L = (i + n + 2) % (2*n)
+                panel_hinges.append([I, J, K, L])
+            panel_hinges.append([n-1, 2*n-1, n, n+1])
+
+            for i in range(n-1):
+                I = (i + n + 1) % (2*n)
+                J = i
+                K = (i + 1) % (n)
+                L = (i - 1) % (n)
+                panel_hinges.append([I, J, K, L])
+            panel_hinges.append([n, n-1, 0, n-2])
+            kresling["dictionary"] += panel_hinges
+            kresling["types"] += ["OriHinge"]*len(panel_hinges)
 
         kresling["properties"] = {"problem": "ShellAndHinge", }
 
