@@ -11,7 +11,7 @@ data = kresling.generate(get_int_lines=False,
                          get_ext_lines=True,
                          get_base_bars=True,
                          get_ext_hinges=False,
-                         get_int_hinges=False,
+                         get_int_hinges=True,
                          get_panels=True,
                          get_base_panels=True,
                          get_base_hinges=True)
@@ -20,7 +20,7 @@ thickness = 3
 data['properties']['theta1'] = R(30)
 data['properties']['theta2'] = R(330)
 O = Geometry.from_json(data, t=thickness)
-O.mesh(n=5)
+O.mesh(n=5, mesh_hinges=False)
 hinge = O.hinges[-1]
 res, center_idx = O.test_point_vertices([0.0, 0.0, H], tol=1e-3)
 
@@ -30,7 +30,7 @@ nodes_tie = O.get_nodes_plane('z', H, tol=1e-3, basenodes=True)
 print("Nodes at the top plane:", nodes_tie)
 
 # O.add_load_plane('z', H, values=[0, 0, -1/len(nodes_tie), 0, 0, 0])
-O.nbc.append([center_idx, 0, 0, -1, 0, 0, 0])
+O.nbc.append([center_idx, 0, 0, 0, 0, 0, 1])
 O.ebc.append([center_idx, 0, 0, -1, 0, 0, 0])
 
 BASE_E = 210000
@@ -39,7 +39,7 @@ model.add_material_shells(mat_tag=1, E=BASE_E, v=0.49)
 model.add_material_shells(mat_tag=2, E=1e6*BASE_E, v=0.49,
                           shell_list=list(range(2*n, 2*n+2)))
 model.add_material_bars(mat_tag=3, E=1e10, A=1.0)
-model.add_material_hinges(k=0.5)
+model.add_material_hinges(k=100)
 model.create_model()
 
 nodes_tie = O.get_nodes_plane('z', H, tol=1e-3)
@@ -55,8 +55,8 @@ ops.fix(*[center_idx, 1, 1, 0, 0, 0, 0])
 model.setup_model(tol=1e-2)
 
 # Setup solver
-M = 350
-ops.integrator('DisplacementControl', center_idx, 6, -delta_theta/M)
+M = 200
+ops.integrator('DisplacementControl', center_idx, 3, -H/M)
 # ops.integrator('MGDCM', 200, 15, 4, 0)
 ops.algorithm('Newton')
 ops.analysis('Static')

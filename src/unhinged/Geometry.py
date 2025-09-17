@@ -270,7 +270,16 @@ class Geometry():
         self.nodes = np.array(self.nodes)
 
         for i, hinge in enumerate(self.hinges):
-            hinge.mesh(n)
+            if mesh_hinges:
+                hinge.mesh(n)
+            else:
+                hinge.mesh(1)
+                # update hinge nodes to new node indices
+                idxn1 = self.test_point_vertices(hinge.coords[0])[1]
+                idxn2 = self.test_point_vertices(hinge.coords[1])[1]
+                idxn3 = self.test_point_vertices(hinge.coords[2])[1]
+                idxn4 = self.test_point_vertices(hinge.coords[3])[1]
+                hinge.discretized_elements = [[idxn1, idxn2, idxn3, idxn4]]
             for subelement in hinge.discretized_elements:
                 idxn1, idxn2, idxn3, idxn4 = subelement
                 if None in [idxn1, idxn2, idxn3, idxn4]:
