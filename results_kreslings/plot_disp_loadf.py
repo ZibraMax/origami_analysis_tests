@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import json
 
-filename = "results_kreslings/kresling_n_6_b_52_h_70_h0_0.0_t_0.03125_kf_0.02.json"
+filename = "results_kreslings/kresling_n_6_b_52_h_70_h0_60_t_0.5_kf_0.0.json"
 with open(filename, 'r') as f:
     data = json.load(f)
 
