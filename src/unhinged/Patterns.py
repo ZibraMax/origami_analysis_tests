@@ -22,8 +22,9 @@ class Kresling():
         csc_pi_n = 1 / sin_pi_n
         numerator = 2*sin_pi_n * \
             (sin_pi_n*(cot_pi_n**2*csc_pi_n**2-(h**2-h0**2)**2)**0.5-cos_pi_n)
-        x1 = numerator/(1+h**1-h0**2+(1-h**2+h0**2)*np.cos(2*np.pi/n))
-        x2 = numerator/(1-h**1+h0**2+(1+h**2-h0**2)*np.cos(2*np.pi/n))
+
+        x1 = numerator/(1+h**2-h0**2+(1-h**2+h0**2)*np.cos(2*np.pi/n))
+        x2 = numerator/(1-h**2+h0**2+(1+h**2-h0**2)*np.cos(2*np.pi/n))
         alpha = np.arccos((x2*(x2-cot_pi_n)) /
                           (((x2**2+1)*(h0**2*(x2**2+1)+x2**2*csc_pi_n**2))**0.5))
 
@@ -32,8 +33,8 @@ class Kresling():
         self.delta_theta = phi1 - phi0
 
         self.props = {
-            "phi1": phi0,
-            "phi0": phi1,
+            "phi1": phi1,
+            "phi0": phi0,
             "alpha": alpha
         }
 
