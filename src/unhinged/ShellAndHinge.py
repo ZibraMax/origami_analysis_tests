@@ -135,8 +135,8 @@ class ShellAndHinge():
                         print(f"Analysis failed at step {i}")
                         break
                 if callback is not None:
-                    callback(i)
-                solutions.append(self.get_disp_vector())
+                    res = callback(i)
+                solutions.append(self.get_disp_vector(res))
         except KeyboardInterrupt as e:
             print(f"Analysis stopped at step {i} with error: {e}")
         self.solutions = solutions
@@ -237,7 +237,8 @@ class ShellAndHinge():
         ax.set_zlabel('Z')
         ax.set_aspect('equal')
 
-    def get_disp_vector(self):
+    def get_disp_vector(self, additional_info=None):
+        additional_info = additional_info or {}
         U_NODES = []
         nodes = ops.getNodeTags()
         lam = ops.getLoadFactor(1)
@@ -247,7 +248,7 @@ class ShellAndHinge():
         U_NODES = U_NODES.reshape((self.geometry.ngdl_per_node*len(nodes), 1))
         # Get integrator name
         return {
-            "info": {"solver-type": "int_name", "ld": lam},
+            "info": {**additional_info, "ld": lam},
             "U": U_NODES.tolist(),
         }
 

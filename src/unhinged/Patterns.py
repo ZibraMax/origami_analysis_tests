@@ -10,7 +10,7 @@ class Kresling():
         self.n = n
         pi_n = np.pi / n
         cot_pi_n = 1 / np.tan(pi_n)
-        if abs(H1**1-H0**2) <= b**2*cot_pi_n**2:
+        if abs(H1-H0) > cot_pi_n:
             Exception(
                 "The pattern is not valid for the given parameters. Contact between the panels")
 
@@ -32,8 +32,8 @@ class Kresling():
         self.delta_theta = phi1 - phi0
 
         self.props = {
-            "phi0": phi0,
-            "phi1": phi1,
+            "phi1": phi0,
+            "phi0": phi1,
             "alpha": alpha
         }
 
