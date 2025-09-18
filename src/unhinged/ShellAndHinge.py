@@ -120,11 +120,11 @@ class ShellAndHinge():
         for stie in self.geometry.super_tie_nodes:
             ops.equalDOF(stie[0], stie[1], *[1, 2, 3, 4, 5, 6])
 
-    def setup_model(self, tol=1e-5):
+    def setup_model(self, tol=1e-5, maxiter=500):
         ops.system('BandGeneral')
         ops.numberer('RCM')
         ops.constraints('Plain')
-        ops.test('NormDispIncr', tol, 500)
+        ops.test('NormDispIncr', tol, maxiter)
 
     def analyze(self, n_steps, callback=None):
         solutions = []

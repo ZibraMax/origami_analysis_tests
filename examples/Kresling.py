@@ -3,18 +3,21 @@ import opensees as ops
 import matplotlib.pyplot as plt
 
 # Input parameters
-H = 70
-H0 = 60
+H = 10
+H0 = 0
 n = 6
-b = 52
-thickness = 0.5
+b = 7
+thickness = 0.15
 BASE_E = 210000
 khinge = 0.0
-mesh_refinement = 5
-TOL = 1e-5
-target_disp = 25.0
-M = 300
 
+mesh_refinement = 6
+
+TOL = 1e-3
+target_disp = H
+M = 200
+POSAO = 0.15
+FOLDER = "results_poisson"
 
 Nmodes = n*10
 number_sides = n
@@ -45,8 +48,8 @@ print("Nodes at the top plane:", nodes_tie)
 O.nbc.append([center_idx, 0, 0, 0, 0, 0, 1])
 
 model = ShellAndHinge(O)
-model.add_material_shells(mat_tag=1, E=BASE_E, v=0.49)
-model.add_material_shells(mat_tag=2, E=1e6*BASE_E, v=0.49,
+model.add_material_shells(mat_tag=1, E=BASE_E, v=POSAO)
+model.add_material_shells(mat_tag=2, E=1e6*BASE_E, v=POSAO,
                           shell_list=list(range(2*n, 2*n+2)))
 # model.add_material_bars(mat_tag=3, E=1e6*BASE_E, A=1.0)
 model.add_material_hinges(k=khinge)
@@ -58,11 +61,11 @@ for n in nodes_tie[1:]:
 
 ops.fix(*[center_idx, 1, 1, 0, 0, 0, 0])
 
-model.setup_model(tol=TOL)
+model.setup_model(tol=TOL, maxiter=150)
 
 # Setup solver
-# ops.integrator('DisplacementControl', center_idx, 3, -target_disp/M)
-ops.integrator('MGDCM', 500, 15, 3, 0)
+ops.integrator('DisplacementControl', center_idx, 3, -target_disp/M)
+# ops.integrator('MGDCM', 500, 15, 3, 0)
 ops.algorithm('Newton')
 ops.analysis('Static')
 
@@ -93,13 +96,13 @@ for node in ops.getNodeTags():
 
 
 model.export_json(
-    f"./results_kreslings/eigv_kresling_n_{number_sides}_b_{b}_h_{H}_h0_{H0}_t_{thickness}_kf_{khinge}.json")
+    f"./{FOLDER}/eigv_kresling_n_{number_sides}_b_{b}_h_{H}_h0_{H0}_t_{thickness}_kf_{khinge}_poaso_{POSAO}.json")
 
 
-fig = plt.figure()
-ax = fig.add_subplot(1, 1, 1, projection='3d')
-model.visualize(ax=ax, undeformed=False, node_labels=False)
-plt.show()
+# fig = plt.figure()
+# ax = fig.add_subplot(1, 1, 1, projection='3d')
+# model.visualize(ax=ax, undeformed=False, node_labels=False)
+# plt.show()
 
 res = {"step": [], "load_factor": [], "disp": []}
 
@@ -124,7 +127,7 @@ ax2 = fig.add_subplot(1, 2, 1, projection='3d')
 ax = fig.add_subplot(1, 2, 2)
 model.visualize(ax=ax2)
 model.export_json(
-    f"./results_kreslings/kresling_n_{number_sides}_b_{b}_h_{H}_h0_{H0}_t_{thickness}_kf_{khinge}.json")
+    f"./{FOLDER}/kresling_n_{number_sides}_b_{b}_h_{H}_h0_{H0}_t_{thickness}_kf_{khinge}_poaso_{POSAO}.json")
 ax.plot(res['disp'], res['load_factor'], 'r-')
 ax.set_xlabel('Displacement')
 ax.set_ylabel('Load factor')
