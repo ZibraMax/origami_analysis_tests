@@ -1,6 +1,7 @@
 from unhinged import *
 import opensees as ops
 import matplotlib.pyplot as plt
+import os
 
 # Input parameters
 H = 10
@@ -16,8 +17,14 @@ mesh_refinement = 6
 TOL = 1e-3
 target_disp = H
 M = 200
-POSAO = 0.15
+POSAO = 0.5
 FOLDER = "results_poisson"
+
+try:
+    os.mkdir(FOLDER)
+except Exception as e:
+    pass
+
 
 Nmodes = n*10
 number_sides = n
