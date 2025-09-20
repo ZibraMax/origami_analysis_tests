@@ -4,21 +4,24 @@ import matplotlib.pyplot as plt
 import os
 
 # Input parameters
-H = 10
+H = 18.2
 H0 = 0
 n = 6
-b = 7
-thickness = 0.15
-BASE_E = 210000
-khinge = 0.0
+b = 13
+thickness = 0.12
+OPEN = True
 
-mesh_refinement = 6
+BASE_E = 1219.4
+POSAO = 0.3
+khinge = 2.4e-2
+
+
+mesh_refinement = 10
 
 TOL = 1e-3
 target_disp = H
-M = 200
-POSAO = 0.5
-FOLDER = "results_poisson"
+M = 100
+FOLDER = "results_comparison_dr_novelino"
 
 try:
     os.mkdir(FOLDER)
@@ -26,12 +29,12 @@ except Exception as e:
     pass
 
 
-Nmodes = n*10
+Nmodes = 7
 number_sides = n
 
 kresling = Kresling(b=b, H0=H0, H1=H, n=n)
 data = kresling.generate(get_int_lines=False,
-                         get_ext_lines=True,
+                         get_ext_lines=OPEN,
                          get_base_bars=False,
                          get_ext_hinges=False,
                          get_int_hinges=True,
@@ -52,13 +55,13 @@ nodes_tie = O.get_nodes_plane('z', H, basenodes=True)
 print("Nodes at the top plane:", nodes_tie)
 
 # O.add_load_plane('z', H, values=[0, 0, -1/len(nodes_tie), 0, 0, 0])
-O.nbc.append([center_idx, 0, 0, 0, 0, 0, 1])
+O.nbc.append([center_idx, 0, 0, -1, 0, 0, 0])
 
 model = ShellAndHinge(O)
 model.add_material_shells(mat_tag=1, E=BASE_E, v=POSAO)
 model.add_material_shells(mat_tag=2, E=1e6*BASE_E, v=POSAO,
                           shell_list=list(range(2*n, 2*n+2)))
-# model.add_material_bars(mat_tag=3, E=1e6*BASE_E, A=1.0)
+model.add_material_bars(mat_tag=3, E=1e6*BASE_E, A=1.0)
 model.add_material_hinges(k=khinge)
 model.create_model()
 
@@ -71,39 +74,42 @@ ops.fix(*[center_idx, 1, 1, 0, 0, 0, 0])
 model.setup_model(tol=TOL, maxiter=150)
 
 # Setup solver
-ops.integrator('DisplacementControl', center_idx, 3, -target_disp/M)
-# ops.integrator('MGDCM', 500, 15, 3, 0)
+ops.integrator('DisplacementControl', center_idx, 6, -delta_theta/M)
+# ops.integrator('MGDCM', 0.1, 15, 3, 1)
 ops.algorithm('Newton')
 ops.analysis('Static')
 
-lam = ops.eigen('standard', 'symmBandLapack', Nmodes)
-eigenvectors = []
-for node in ops.getNodeTags():
-    eigenvectors.append([])
-    for mode in range(Nmodes):
-        ev = ops.nodeEigenvector(node, mode+1)
-        eigenvectors[-1].append(ev)
+# lam = ops.eigen('standard', 'symmBandLapack', Nmodes)
+# eigenvectors = []
+# for node in ops.getNodeTags():
+#     eigenvectors.append([])
+#     for mode in range(Nmodes):
+#         ev = ops.nodeEigenvector(node, mode+1)
+#         eigenvectors[-1].append(ev)
 
-model.solutions = []
-factors = [1 for i in lam]
-for mode in range(Nmodes):
-    for node in ops.getNodeTags():
-        nodedisp = ops.nodeDisp(node)
-        for i, d in enumerate(nodedisp):
-            ops.setNodeDisp(
-                node, i+1, factors[mode]*eigenvectors[node][mode][i], '-commit')
-    sol = model.get_disp_vector()
-    sol["info"] = {"solver-type": "EIGEN", "ld": lam[mode]}
-    model.solutions.append(sol)
-for node in ops.getNodeTags():
-    nodedisp = ops.nodeDisp(node)
-    for i, d in enumerate(nodedisp):
-        ops.setNodeDisp(
-            node, i+1, 0, '-commit')
+# model.solutions = []
+# factors = [1 for i in lam]
+# for mode in range(Nmodes):
+#     for node in ops.getNodeTags():
+#         nodedisp = ops.nodeDisp(node)
+#         for i, d in enumerate(nodedisp):
+#             ops.setNodeDisp(
+#                 node, i+1, factors[mode]*eigenvectors[node][mode][i], '-commit')
+#     sol = model.get_disp_vector()
+#     sol["info"] = {"solver-type": "EIGEN", "ld": lam[mode]}
+#     model.solutions.append(sol)
+# for node in ops.getNodeTags():
+#     nodedisp = ops.nodeDisp(node)
+#     for i, d in enumerate(nodedisp):
+#         ops.setNodeDisp(
+#             node, i+1, 0, '-commit')
 
+basename = f"ClosedKresling_n_{number_sides}_b_{b}_h_{H}_h0_{H0}_t_{thickness}_kf_{khinge}_poaso_{POSAO}_E_{BASE_E}_mesh_{mesh_refinement}"
+if OPEN:
+    basename = f"OpenKresling_n_{number_sides}_b_{b}_h_{H}_h0_{H0}_t_{thickness}_kf_{khinge}_poaso_{POSAO}_E_{BASE_E}_mesh_{mesh_refinement}"
 
-model.export_json(
-    f"./{FOLDER}/eigv_kresling_n_{number_sides}_b_{b}_h_{H}_h0_{H0}_t_{thickness}_kf_{khinge}_poaso_{POSAO}.json")
+# model.export_json(
+#     f"./{FOLDER}/eigv_{basename}.json")
 
 
 # fig = plt.figure()
@@ -134,7 +140,7 @@ ax2 = fig.add_subplot(1, 2, 1, projection='3d')
 ax = fig.add_subplot(1, 2, 2)
 model.visualize(ax=ax2)
 model.export_json(
-    f"./{FOLDER}/kresling_n_{number_sides}_b_{b}_h_{H}_h0_{H0}_t_{thickness}_kf_{khinge}_poaso_{POSAO}.json")
+    f"./{FOLDER}/{basename}.json")
 ax.plot(res['disp'], res['load_factor'], 'r-')
 ax.set_xlabel('Displacement')
 ax.set_ylabel('Load factor')

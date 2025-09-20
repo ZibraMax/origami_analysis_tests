@@ -59,29 +59,36 @@ class PolygonalPanel(Panel):
                 nodes += nnodes.tolist()
                 elements += [[idx + len(nodes) - len(nnodes) for idx in elem]
                              for elem in nelements]
-            # Get rid of duplicate nodes and reindex elements
-            unique_nodes = []
-            node_map = {}
-            for i, node in enumerate(nodes):
-                found, idx = self.test_point_vertices(
-                    node, np.array(unique_nodes))
-                if found:
-                    node_map[i] = idx
-                else:
-                    node_map[i] = len(unique_nodes)
-                    unique_nodes.append(node)
-            reindexed_elements = []
-            for elem in elements:
-                reindexed_elements.append([node_map[idx] for idx in elem])
-            self.discretized_nodes = np.array(unique_nodes)
-            self.discretized_elements = reindexed_elements
-            self._discretized_elements = [x[:]
-                                          for x in self.discretized_elements]
+
         else:
-            self.discretized_nodes = self.coords
-            self.discretized_elements = [list(range(len(self.nodes)))]
-            self._discretized_elements = [x[:]
-                                          for x in self.discretized_elements]
+            # get centerpoint of polygon
+            center = np.mean(self.coords, axis=0)
+            nodes = []
+            elements = []
+            for i in range(len(self.nodes)):
+                n0 = center
+                n1 = self.coords[i]
+                n2 = self.coords[(i+1) % len(self.nodes)]
+                nodes += [n0, n1, n2]
+                elements += [[len(nodes)-3, len(nodes)-2, len(nodes)-1]]
+        # Get rid of duplicate nodes and reindex elements
+        unique_nodes = []
+        node_map = {}
+        for i, node in enumerate(nodes):
+            found, idx = self.test_point_vertices(
+                node, np.array(unique_nodes))
+            if found:
+                node_map[i] = idx
+            else:
+                node_map[i] = len(unique_nodes)
+                unique_nodes.append(node)
+        reindexed_elements = []
+        for elem in elements:
+            reindexed_elements.append([node_map[idx] for idx in elem])
+        self.discretized_nodes = np.array(unique_nodes)
+        self.discretized_elements = reindexed_elements
+        self._discretized_elements = [x[:]
+                                      for x in self.discretized_elements]
         return self.discretized_nodes, self.discretized_elements
 
 
