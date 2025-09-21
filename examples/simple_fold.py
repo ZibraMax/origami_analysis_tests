@@ -13,7 +13,7 @@ kf = 0.3
 E = 200
 v = 0.3
 t = 0.5
-N = 1
+N = 2
 
 geo = uh.Geometry(6)
 geo.add_nodes(nodes)

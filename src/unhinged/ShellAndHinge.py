@@ -84,7 +84,9 @@ class ShellAndHinge():
                 nel = len(ops.getEleTags())
                 panel.eletags.append(nel)
                 ops.element(panel_type, nel, *shell,
-                            self.materials_panels[i], '-corotational', '-reducedIntegration', '-drillingNL')
+                            self.materials_panels[i], '-corotational')
+                # ops.element(panel_type, nel, *shell,
+                #             self.materials_panels[i], '-corotational', '-reducedIntegration', '-drillingNL')
 
         for i, hinge in enumerate(self.geometry.hinges):
             if self.materials_hinges[i] == -1:
@@ -95,6 +97,10 @@ class ShellAndHinge():
                 ops.element('OriHinge', nel, *minihinge,
                             self.materials_hinges[i], hinge.theta1, hinge.theta2)
                 hinge.eletags.append(nel)
+                nel = len(ops.getEleTags())
+                # ops.element('elasticBeamColumn', nel, minihinge[1], minihinge[2],
+                #             1e2, 1e2, 0.0, 0.0, 1.0, 1.0, 1, '-mass', 0.0)
+                # hinge.eletags.append(nel)
         for i, bar in enumerate(self.geometry.bars):
             nel = len(ops.getEleTags())
             bar.eletag = nel

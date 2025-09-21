@@ -4,20 +4,20 @@ import matplotlib.pyplot as plt
 import os
 
 # Input parameters
-H = 10
-H0 = 5
+H = 18.2
+H0 = 0.0
 n = 6
-b = 7
-thickness = 1
-BASE_E = 210000
-khinge = 0.0
+b = 13
+thickness = 0.12
+BASE_E = 1219.4
+khinge = 2.4e-3
 OPEN = True
 mesh_refinement = 2
 
-TOL = 1e-3
-target_disp = H - H0+1
+TOL = 1e-5
+target_disp = H - H0
 M = 200
-POSAO = 0.5
+POSAO = 0.0
 FOLDER = "results_testing_late_night"
 
 try:
@@ -41,8 +41,8 @@ data = kresling.generate(get_int_lines=False,
                          get_base_panels=True,
                          get_base_hinges=True)
 delta_theta = kresling.delta_theta
-data['properties']['theta1'] = R(30)
-data['properties']['theta2'] = R(330)
+data['properties']['theta1'] = R(10)
+data['properties']['theta2'] = R(350)
 O = Geometry.from_json(data, t=thickness)
 O.mesh(n=mesh_refinement)
 hinge = O.hinges[-1]
@@ -54,7 +54,7 @@ nodes_tie = O.get_nodes_plane('z', H, basenodes=True)
 print("Nodes at the top plane:", nodes_tie)
 
 # O.add_load_plane('z', H, values=[0, 0, -1/len(nodes_tie), 0, 0, 0])
-O.nbc.append([center_idx, 0, 0, -1, 0, 0, 1])
+O.nbc.append([center_idx, 0, 0, -1, 0, 0, 0])
 
 model = ShellAndHinge(O)
 model.add_material_shells(mat_tag=1, E=BASE_E, v=POSAO)
@@ -62,6 +62,8 @@ model.add_material_shells(mat_tag=2, E=1e6*BASE_E, v=POSAO,
                           shell_list=list(range(2*n, 2*n+2)))
 # model.add_material_bars(mat_tag=3, E=1e6*BASE_E, A=1.0)
 model.add_material_hinges(k=khinge)
+
+# ops.geomTransf('Corotational', 1, 0, 0, 1)
 model.create_model()
 
 # nodes_tie = O.get_nodes_plane('z', H)
@@ -70,7 +72,7 @@ model.create_model()
 
 ops.fix(*[center_idx, 1, 1, 0, 0, 0, 0])
 
-model.setup_model(tol=TOL, maxiter=150)
+model.setup_model(tol=TOL, maxiter=200)
 
 # Setup solver
 ops.integrator('DisplacementControl', center_idx, 3, -target_disp/M)
@@ -78,40 +80,40 @@ ops.integrator('DisplacementControl', center_idx, 3, -target_disp/M)
 ops.algorithm('Newton')
 ops.analysis('Static')
 
-lam = ops.eigen('standard', 'symmBandLapack', Nmodes)
-eigenvectors = []
-for node in ops.getNodeTags():
-    eigenvectors.append([])
-    for mode in range(Nmodes):
-        ev = ops.nodeEigenvector(node, mode+1)
-        eigenvectors[-1].append(ev)
+# lam = ops.eigen('standard', 'symmBandLapack', Nmodes)
+# eigenvectors = []
+# for node in ops.getNodeTags():
+#     eigenvectors.append([])
+#     for mode in range(Nmodes):
+#         ev = ops.nodeEigenvector(node, mode+1)
+#         eigenvectors[-1].append(ev)
 
-model.solutions = []
-factors = [1 for i in lam]
-for mode in range(Nmodes):
-    for node in ops.getNodeTags():
-        nodedisp = ops.nodeDisp(node)
-        for i, d in enumerate(nodedisp):
-            ops.setNodeDisp(
-                node, i+1, factors[mode]*eigenvectors[node][mode][i], '-commit')
-    sol = model.get_disp_vector()
-    sol["info"] = {"solver-type": "EIGEN", "ld": lam[mode]}
-    model.solutions.append(sol)
-for node in ops.getNodeTags():
-    nodedisp = ops.nodeDisp(node)
-    for i, d in enumerate(nodedisp):
-        ops.setNodeDisp(
-            node, i+1, 0, '-commit')
-
-
-model.export_json(
-    f"./{FOLDER}/eigv_{basename}.json")
+# model.solutions = []
+# factors = [1 for i in lam]
+# for mode in range(Nmodes):
+#     for node in ops.getNodeTags():
+#         nodedisp = ops.nodeDisp(node)
+#         for i, d in enumerate(nodedisp):
+#             ops.setNodeDisp(
+#                 node, i+1, factors[mode]*eigenvectors[node][mode][i], '-commit')
+#     sol = model.get_disp_vector()
+#     sol["info"] = {"solver-type": "EIGEN", "ld": lam[mode]}
+#     model.solutions.append(sol)
+# for node in ops.getNodeTags():
+#     nodedisp = ops.nodeDisp(node)
+#     for i, d in enumerate(nodedisp):
+#         ops.setNodeDisp(
+#             node, i+1, 0, '-commit')
 
 
-fig = plt.figure()
-ax = fig.add_subplot(1, 1, 1, projection='3d')
-model.visualize(ax=ax, undeformed=False, node_labels=True)
-plt.show()
+# model.export_json(
+#     f"./{FOLDER}/eigv_{basename}.json")
+
+
+# fig = plt.figure()
+# ax = fig.add_subplot(1, 1, 1, projection='3d')
+# model.visualize(ax=ax, undeformed=False, node_labels=True)
+# plt.show()
 
 res = {"step": [], "load_factor": [], "disp": []}
 

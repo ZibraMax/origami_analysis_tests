@@ -410,7 +410,7 @@ def create_model_from_json(file_path, n=2):
 
 
 if __name__ == '__main__':
-    file_path = "./shell_and_hinge/kresling/kresling_discretized.json"
+    file_path = "./old_examples/shell_and_hinge/kresling/kresling_discretized.json"
     data, materials = create_model_from_json(file_path, 3)
 
     # Plot nodes
@@ -530,7 +530,7 @@ if __name__ == '__main__':
 
     data["types"] = ["T1V" if t == "ASDShellT3" else "OH" for t in data["types"]]
 
-    json.dump(data, open('./output/discretized_kresling_sah.json', 'w'))
+    json.dump(data, open('./discretized_kresling_sah.json', 'w'))
     visualize(ax=ax, plot_hinges=False)
 
     ax2.plot(res['disp'], res['load_factor'], 'r-')

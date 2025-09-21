@@ -140,7 +140,7 @@ for i, element in enumerate(dictionary):
     if etype == 'OriHinge':
         ops.element('OriHinge', i, *element, kf, THETA_1, THETA_2)
     elif etype == 'ASDShellT3':
-        ops.element('ASDShellT3', i, *element, 1, '-corotational')
+        ops.element('ShellNLDKGT', i, *element, 1, '-corotational')
 
 # Apply boundary conditions
 for bv in ebc:
