@@ -23,8 +23,8 @@ class Kresling():
         numerator = 2*sin_pi_n * \
             (sin_pi_n*(cot_pi_n**2*csc_pi_n**2-(h**2-h0**2)**2)**0.5-cos_pi_n)
 
-        x1 = numerator/(1+h**2-h0**2+(1-h**2+h0**2)*np.cos(2*np.pi/n))
-        x2 = numerator/(1-h**2+h0**2+(1+h**2-h0**2)*np.cos(2*np.pi/n))
+        x1 = numerator/(1+(h**2-h0**2)+(1-(h**2-h0**2))*np.cos(2*np.pi/n))
+        x2 = numerator/(1-(h**2-h0**2)+(1+(h**2-h0**2))*np.cos(2*np.pi/n))
         alpha = np.arccos((x2*(x2-cot_pi_n)) /
                           (((x2**2+1)*(h0**2*(x2**2+1)+x2**2*csc_pi_n**2))**0.5))
 
@@ -79,16 +79,18 @@ class Kresling():
         base_panels = kresling["base_panels"]
 
         # Create base and top polygons in 3D coordinates
+        R = b / (2 * np.sin(np.pi / n))
+
         for i in range(n):
             angle = 2 * np.pi * i / n
-            x_base = b * np.cos(angle)
-            y_base = b * np.sin(angle)
+            x_base = R * np.cos(angle)
+            y_base = R * np.sin(angle)
             nodes.append([float(x_base), float(y_base), 0.0])
 
         for i in range(n):
             angle = 2 * np.pi * i / n
-            x_base = b * np.cos(angle)
-            y_base = b * np.sin(angle)
+            x_base = R * np.cos(angle)
+            y_base = R * np.sin(angle)
             x_top = x_base
             y_top = y_base
             coodr = (x_top, y_top, H1)
