@@ -117,9 +117,6 @@ class ShellAndHinge():
         for tie in self.geometry.tie_nodes:
             ops.equalDOF(tie[0], tie[1], *tie_type)
 
-        for stie in self.geometry.super_tie_nodes:
-            ops.equalDOF(stie[0], stie[1], *[1, 2, 3, 4, 5, 6])
-
     def setup_model(self, tol=1e-5, maxiter=500):
         ops.system('BandGeneral')
         ops.numberer('RCM')
@@ -211,7 +208,7 @@ class ShellAndHinge():
             ax.scatter(coor[0], coor[1], coor[2], color=color, s=size)
             if node_labels:
                 ax.text(coor[0], coor[1], coor[2],
-                        str(i), color='red', fontsize=8)
+                        str(i), color='red', fontsize=15)
         for tie in self.geometry.tie_nodes:
             c1 = ops.nodeCoord(tie[0])
             c2 = ops.nodeCoord(tie[0])

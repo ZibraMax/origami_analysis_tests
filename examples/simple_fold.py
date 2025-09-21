@@ -13,7 +13,7 @@ kf = 0.3
 E = 200
 v = 0.3
 t = 0.5
-N = 3
+N = 1
 
 geo = uh.Geometry(6)
 geo.add_nodes(nodes)
@@ -45,7 +45,7 @@ ops.analysis('Static')
 
 fig = plt.figure()
 ax = fig.add_subplot(1, 1, 1, projection='3d')
-model.visualize(ax=ax, undeformed=False, node_labels=False)
+model.visualize(ax=ax, undeformed=False, node_labels=True)
 plt.show()
 
 res = {"step": [], "load_factor": [], "disp": []}

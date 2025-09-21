@@ -5,20 +5,20 @@ import os
 
 # Input parameters
 H = 10
-H0 = 0
+H0 = 5
 n = 6
 b = 7
-thickness = 0.15
+thickness = 1
 BASE_E = 210000
 khinge = 0.0
-
-mesh_refinement = 6
+OPEN = True
+mesh_refinement = 2
 
 TOL = 1e-3
-target_disp = H
+target_disp = H - H0+1
 M = 200
 POSAO = 0.5
-FOLDER = "results_poisson"
+FOLDER = "results_testing_late_night"
 
 try:
     os.mkdir(FOLDER)
@@ -28,10 +28,12 @@ except Exception as e:
 
 Nmodes = n*10
 number_sides = n
-
+basename = f"Kresling_n_{number_sides}_b_{b}_h_{H}_h0_{H0}_t_{thickness}_kf_{khinge}_poaso_{POSAO}_E_{BASE_E}_mrf_{mesh_refinement}"
+if OPEN:
+    basename = "Open" + basename
 kresling = Kresling(b=b, H0=H0, H1=H, n=n)
 data = kresling.generate(get_int_lines=False,
-                         get_ext_lines=True,
+                         get_ext_lines=OPEN,
                          get_base_bars=False,
                          get_ext_hinges=False,
                          get_int_hinges=True,
@@ -52,7 +54,7 @@ nodes_tie = O.get_nodes_plane('z', H, basenodes=True)
 print("Nodes at the top plane:", nodes_tie)
 
 # O.add_load_plane('z', H, values=[0, 0, -1/len(nodes_tie), 0, 0, 0])
-O.nbc.append([center_idx, 0, 0, 0, 0, 0, 1])
+O.nbc.append([center_idx, 0, 0, -1, 0, 0, 1])
 
 model = ShellAndHinge(O)
 model.add_material_shells(mat_tag=1, E=BASE_E, v=POSAO)
@@ -62,9 +64,9 @@ model.add_material_shells(mat_tag=2, E=1e6*BASE_E, v=POSAO,
 model.add_material_hinges(k=khinge)
 model.create_model()
 
-nodes_tie = O.get_nodes_plane('z', H)
-for n in nodes_tie[1:]:
-    ops.equalDOF(nodes_tie[0], n, 3)
+# nodes_tie = O.get_nodes_plane('z', H)
+# for n in nodes_tie[1:]:
+# ops.equalDOF(nodes_tie[0], n, 3)
 
 ops.fix(*[center_idx, 1, 1, 0, 0, 0, 0])
 
@@ -103,13 +105,13 @@ for node in ops.getNodeTags():
 
 
 model.export_json(
-    f"./{FOLDER}/eigv_kresling_n_{number_sides}_b_{b}_h_{H}_h0_{H0}_t_{thickness}_kf_{khinge}_poaso_{POSAO}.json")
+    f"./{FOLDER}/eigv_{basename}.json")
 
 
-# fig = plt.figure()
-# ax = fig.add_subplot(1, 1, 1, projection='3d')
-# model.visualize(ax=ax, undeformed=False, node_labels=False)
-# plt.show()
+fig = plt.figure()
+ax = fig.add_subplot(1, 1, 1, projection='3d')
+model.visualize(ax=ax, undeformed=False, node_labels=True)
+plt.show()
 
 res = {"step": [], "load_factor": [], "disp": []}
 
@@ -134,7 +136,7 @@ ax2 = fig.add_subplot(1, 2, 1, projection='3d')
 ax = fig.add_subplot(1, 2, 2)
 model.visualize(ax=ax2)
 model.export_json(
-    f"./{FOLDER}/kresling_n_{number_sides}_b_{b}_h_{H}_h0_{H0}_t_{thickness}_kf_{khinge}_poaso_{POSAO}.json")
+    f"./{FOLDER}/{basename}.json")
 ax.plot(res['disp'], res['load_factor'], 'r-')
 ax.set_xlabel('Displacement')
 ax.set_ylabel('Load factor')

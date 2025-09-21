@@ -43,9 +43,6 @@ class Hinge(Element):
         self.panels: list[Panel] = []
 
     def mesh(self, n) -> Tuple[np.ndarray, list]:
-        if n == 1:
-            self.discretized_elements = [self.nodes]
-            return
         v1 = self.coords[0]
         v2 = self.coords[1]
         v3 = self.coords[2]
