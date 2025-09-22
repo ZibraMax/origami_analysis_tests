@@ -23,6 +23,10 @@ class ShellAndHinge():
         ops.wipe()
         ops.model('basic', '-ndm', self.ndm, '-ndf', self.ndf)
 
+    def restart_model(self):
+        ops.wipe()
+        ops.model('basic', '-ndm', self.ndm, '-ndf', self.ndf)
+
     def add_material_shells(self, mat_tag, E, v, shell_list=None):
         if shell_list is None:
             self.materials_panels = [mat_tag]*len(self.geometry.panels)
@@ -83,10 +87,10 @@ class ShellAndHinge():
             for shell in panel.discretized_elements:
                 nel = len(ops.getEleTags())
                 panel.eletags.append(nel)
-                ops.element(panel_type, nel, *shell,
-                            self.materials_panels[i], '-corotational')
                 # ops.element(panel_type, nel, *shell,
-                #             self.materials_panels[i], '-corotational', '-reducedIntegration', '-drillingNL')
+                #             self.materials_panels[i], '-corotational')
+                ops.element(panel_type, nel, *shell,
+                            self.materials_panels[i], '-corotational', '-reducedIntegration', '-drillingNL')
 
         for i, hinge in enumerate(self.geometry.hinges):
             if self.materials_hinges[i] == -1:
@@ -147,8 +151,8 @@ class ShellAndHinge():
 
     def visualize(self, ax=None, undeformed=False, node_labels=False, plot_hinges=True):
         if ax is None:
-            fig = plt.figure(figsize=[12, 5])
-            ax = fig.add_subplot(1, 2, 1, projection='3d')
+            fig = plt.figure(figsize=[12, 12])
+            ax = fig.add_subplot(1, 1, 1, projection='3d')
             plt.axis("off")
 
         for panel in self.geometry.panels:
@@ -274,4 +278,4 @@ class ShellAndHinge():
             data["solutions"] = self.solutions
         import json
         with open(filename, 'w') as f:
-            json.dump(data, f, indent=2)
+            json.dump(data, f)

@@ -112,6 +112,29 @@ class Geometry():
         self.types = []
         self.properties = {}
 
+    def add_nodal_imperfections(self, U, scale=1.0):
+        if not self.meshed:
+            raise ValueError(
+                "Geometry must be meshed before adding imperfections.")
+        if not isinstance(U, np.ndarray):
+            U = np.array(U).flatten()
+        if len(U.shape) != 2:
+            try:
+                U = U.reshape((len(self.nodes), self.ngdl_per_node))
+            except Exception as e:
+                raise ValueError(
+                    "Imperfection array must have shape (n_nodes, 6).")
+        if len(U) != len(self.nodes):
+            raise ValueError(
+                "Imperfection array must have the same length as the number of nodes.")
+        if U.shape[1] != 3:
+            try:
+                U = U[:, :3]
+            except Exception as e:
+                raise ValueError(
+                    "Imperfection array must have shape (n_nodes, 3).")
+        self.nodes += U * scale
+
     def test_point_vertices(self, vertex, tol=1e-10):
         if len(self.nodes) == 0:
             return False, None
