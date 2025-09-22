@@ -206,9 +206,16 @@ class Geometry():
         if plane not in ['x', 'y', 'z']:
             raise ValueError("Plane must be 'x', 'y', or 'z'.")
         axis = {'x': 0, 'y': 1, 'z': 2}[plane]
+        nodes = []
         for i, node in enumerate(self.nodes):
             if abs(node[axis]-coord) < tol:
-                self.ebc.append([i, *values])
+                nodes.append(i)
+        for i in nodes:
+            if i in self.dict_tie_nodes:
+                for j in self.dict_tie_nodes[i]:
+                    nodes.remove(j)
+        for i in nodes:
+            self.ebc.append([i, *values])
 
     def add_load_plane(self, plane='z', coord=0.0, values=None, tol=1e-8):
         if not self.meshed:
@@ -247,7 +254,6 @@ class Geometry():
         self.nodes = []
         elements = []
         tie_nodes = []
-        super_tie_nodes = []
         types = []
         properties = {}
         properties["th"] = []
@@ -321,8 +327,17 @@ class Geometry():
                 for idx in duplicate_indices[1:]:
                     tie_nodes.append((duplicate_indices[0], idx))
         self.dictionary = elements
-        self.tie_nodes = tie_nodes
-        self.super_tie_nodes = super_tie_nodes
+        self.tie_nodes = set(tie_nodes)
+        index_tie_nodes = []
+        for tie in tie_nodes:
+            index_tie_nodes.append(tie[0])
+        set_tie_nodes = set(index_tie_nodes)
+        dict_tie_nodes = {}
+        for tie in self.tie_nodes:
+            if tie[0] not in dict_tie_nodes:
+                dict_tie_nodes[tie[0]] = []
+            dict_tie_nodes[tie[0]].append(tie[1])
+        self.dict_tie_nodes = dict_tie_nodes
         self.types = types
         properties["problem"] = "ShellAndHinge"
         self.properties = properties

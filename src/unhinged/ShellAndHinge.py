@@ -84,7 +84,9 @@ class ShellAndHinge():
                 nel = len(ops.getEleTags())
                 panel.eletags.append(nel)
                 ops.element(panel_type, nel, *shell,
-                            self.materials_panels[i], '-corotational', '-reducedIntegration', '-drillingNL')
+                            self.materials_panels[i], '-corotational')
+                # ops.element(panel_type, nel, *shell,
+                #             self.materials_panels[i], '-corotational', '-reducedIntegration', '-drillingNL')
 
         for i, hinge in enumerate(self.geometry.hinges):
             if self.materials_hinges[i] == -1:
@@ -95,6 +97,10 @@ class ShellAndHinge():
                 ops.element('OriHinge', nel, *minihinge,
                             self.materials_hinges[i], hinge.theta1, hinge.theta2)
                 hinge.eletags.append(nel)
+                nel = len(ops.getEleTags())
+                # ops.element('elasticBeamColumn', nel, minihinge[1], minihinge[2],
+                #             1e2, 1e2, 0.0, 0.0, 1.0, 1.0, 1, '-mass', 0.0)
+                # hinge.eletags.append(nel)
         for i, bar in enumerate(self.geometry.bars):
             nel = len(ops.getEleTags())
             bar.eletag = nel
@@ -116,9 +122,6 @@ class ShellAndHinge():
     def create_ties(self, tie_type=[1, 2, 3]):
         for tie in self.geometry.tie_nodes:
             ops.equalDOF(tie[0], tie[1], *tie_type)
-
-        for stie in self.geometry.super_tie_nodes:
-            ops.equalDOF(stie[0], stie[1], *[1, 2, 3, 4, 5, 6])
 
     def setup_model(self, tol=1e-5, maxiter=500):
         ops.system('BandGeneral')
@@ -211,7 +214,7 @@ class ShellAndHinge():
             ax.scatter(coor[0], coor[1], coor[2], color=color, s=size)
             if node_labels:
                 ax.text(coor[0], coor[1], coor[2],
-                        str(i), color='red', fontsize=8)
+                        str(i), color='red', fontsize=15)
         for tie in self.geometry.tie_nodes:
             c1 = ops.nodeCoord(tie[0])
             c2 = ops.nodeCoord(tie[0])

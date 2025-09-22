@@ -203,7 +203,7 @@ def create_model_from_json(file_path):
 
 
 if __name__ == '__main__':
-    file_path = "./shell_and_hinge/kresling/rigid_kresling.json"
+    file_path = "./old_examples/shell_and_hinge/kresling/rigid_kresling.json"
     data, materials = create_model_from_json(file_path)
     data["solutions"] = []
     base_bars = data['base_bars']
@@ -281,7 +281,7 @@ if __name__ == '__main__':
 
     data["types"] = ["T1V" if t == "ASDShellT3" else "OH" for t in data["types"]]
 
-    json.dump(data, open('./output/rigid_kresling_sah.json', 'w'))
+    json.dump(data, open('./rigid_kresling_sah.json', 'w'))
     visualize(ax=ax, plot_hinges=False)
 
     ax2.plot(res['disp'], res['load_factor'], 'r-')
